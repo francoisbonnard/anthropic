@@ -27,11 +27,12 @@ Le script `npm run deploy` effectue automatiquement :
 
 2. Remplir les variables dans `.env` :
    ```
-   FTP_HOST=ftp.votreserveur.ovh.net
-   FTP_USER=votre_identifiant_ftp
-   FTP_PASSWORD=votre_mot_de_passe_ftp
-   FTP_REMOTE_PATH=/anthropic/
-   FTP_PORT=21
+FTP_SFTP=true
+FTP_USER=zerdayt
+FTP_PASSWORD=666T
+FTP_HOST=ftp.cluster130.hosting.ovh.net
+FTP_REMOTE_PATH=/home/zerdayt/www/anthropic/
+FTP_PORT=22
    ```
 
    - **FTP_HOST** : adresse du serveur FTP OVH (ex. `ftp.cluster0XX.hosting.ovh.net`)
