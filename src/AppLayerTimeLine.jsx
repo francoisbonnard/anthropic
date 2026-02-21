@@ -2,17 +2,44 @@ import React, { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
+import { STOCKS, getStockPriceBounds } from "./stockData";
 
 /**
- * 5 layers (0..4)
+ * 6 layers (0..5)
  * - each layer has: name, meta, color
  */
-const levelTimeline = -2.2;
+
 const level0 = -1.2;
 const level1 = 0;
 const level2 = 1.35;
 const level3 = 2.0;
 const level4 = 3.0;
+const level5 = 4.0;
+
+// Timeline: 04 oct 2022 → 04 oct 2026, sur un layer sous layer0
+const TIMELINE_START = new Date(2022, 9, 4); // mois 0-indexé
+const TIMELINE_END = new Date(2026, 9, 4);
+const TIMELINE_Y = -2.2; // sous level0 (-1.2)
+const TIMELINE_Z_MIN = -8;
+const TIMELINE_Z_MAX = 8;
+const TIMELINE_LENGTH = TIMELINE_Z_MAX - TIMELINE_Z_MIN;
+const RING_RADIUS = TIMELINE_LENGTH / 2; // diamètre = longueur timeline
+const RING_Y = TIMELINE_Y - 1; // hauteur des cercles ImpactRing et ShockwaveRing
+
+// Plan StockMarket (YZ) — évolution des cours, timeline synchronisée
+const STOCK_PLANE_X = -10;
+const STOCK_Y_RANGE = 6; // hauteur du graphique en unités 3D
+
+function dateToTimelineZ(dateStrOrDate) {
+  const d = dateStrOrDate instanceof Date ? dateStrOrDate : new Date(dateStrOrDate);
+  const t = (d - TIMELINE_START) / (TIMELINE_END - TIMELINE_START);
+  return TIMELINE_Z_MAX - THREE.MathUtils.clamp(t, 0, 1) * (TIMELINE_Z_MAX - TIMELINE_Z_MIN);
+}
+
+function priceToY(price, priceMin, priceMax) {
+  const t = (price - priceMin) / (priceMax - priceMin);
+  return RING_Y + THREE.MathUtils.clamp(t, 0, 1) * STOCK_Y_RANGE;
+}
 
 const LAYERS = {
   0: {
@@ -45,6 +72,12 @@ const LAYERS = {
     meta:
       "Déploiements massifs (SI/consulting, grands comptes, défense/régulé) avec gouvernance, conformité, sécurité, contrôle des risques et industrialisation.",
   },
+  5: {
+    name: "L5 — Market Analysis",
+    color: "#06b6d4",
+    meta:
+      "Analyses de marché et prédictions sur l'adoption, la productivité et les risques des projets IA agentique.",
+  },
 };
 
 const NODES = [
@@ -62,8 +95,56 @@ const NODES = [
       },
   },
 
+  {
+    id: "mcp",
+    layer: 0,
+    label: "MCP",
+    pos: [0, level0, 0],
+    size: [2.4, 0.35, 1.2],
+    source: {
+        date: "2024-11-25",
+        link: "https://www.anthropic.com/news/model-context-protocol",
+        metric: "Introducing the Model Context Protocol"
+      },
+  },
   // L1 — Core AI runtime
-  { id: "claude", layer: 1, label: "Claude\n(models)", pos: [0, 0, 0], size: [1.6, 0.45, 1.0] },
+  { id: "Claude 3 Opus", layer: 1, label: "Claude 3 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
+    source: {
+      date: "2024-03-01",
+      link: "",
+      metric: "Claude 3 Opus"
+    },
+   },
+  { id: "Claude 3.5 Sonnet", layer: 1, label: "Claude 3.5 Sonnet", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
+    source: {
+      date: "2024-06-01",
+      link: "",
+      metric: "Claude 3.5 Sonnet"
+    },
+   },
+  { id: "Claude 4.5 Sonnet", layer: 1, label: "Claude 4.5 Sonnet", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
+    source: {
+      date: "2025-09-01",
+      link: "",
+      metric: "Claude 4.5 Sonnet"
+    },
+   },
+  { id: "Claude 4.5 Opus", layer: 1, label: "Claude 4.5 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
+    source: {
+      date: "2025-11-01",
+      link: "",
+      metric: "Claude 4.5 Opus"
+    },
+   },
+   { id: "Claude 4.6 Opus", layer: 1, label: "Claude 4.6 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
+    source: {
+      date: "2026-02-16",
+      link: "https://xpert.digital/en/saas-apocalypse-on-wall-street/",
+      metric: "SaaS Apocalypse"
+    },
+   },
+
+
   { id: "ccode", layer: 1, label: "Claude Code", pos: [-2.8, 1.1, -0.8], size: [1.4, 0.4, 0.9] },
 
   // L2 — Tooling / workflow UI
@@ -107,18 +188,148 @@ const NODES = [
         metric: "Anthropic, Google, OpenAI and xAI granted up to $200 million for AI work from Defense Department"
       }
    },
+
+  // L5 — Market Analysis
+  {
+    id: "gartner",
+    layer: 5,
+    label: "2027 : 40% agentic AI projects cancelled",
+    pos: [-2.5, level5, 0],
+    size: [2.0, 0.45, 1.0],
+    source: {
+      date: "2025-06-25",
+      link: "https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027",
+      metric: "40% projets IA agentique annulés d'ici 2027",
+    },
+  },
+  {
+    id: "goldman",
+    layer: 5,
+    label: "Goldman Sachs : Agents to boost productivity",
+    pos: [2.5, level5, 0],
+    size: [2.2, 0.45, 1.0],
+    source: {
+      date: "2025-07-03",
+      link: "https://www.goldmansachs.com/insights/articles/ai-agents-to-boost-productivity-and-size-of-software-market",
+      metric: "AI Agents to Boost Productivity and Size of Software Market",
+    },
+  },
 ];
 
-const EDGES = [
-  ["mcp", "claude"],
-  ["claude", "cowork"],
-  ["claude", "ccode"],
-  ["cowork", "snow"],
-  ["ccode", "msft"],
-  ["cowork", "deloitte"],
-  ["cowork", "cognizant"],
-  ["claude", "dod"],
-];
+function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket }) {
+  const [minimized, setMinimized] = useState(false);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 14,
+        bottom: 14,
+        width: minimized ? 180 : 220,
+        background: "rgba(0,0,0,0.72)",
+        color: "white",
+        borderRadius: 14,
+        padding: minimized ? "10px 10px 9px" : "12px 12px 10px",
+        border: "1px solid rgba(255,255,255,0.12)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+        pointerEvents: "auto",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: minimized ? 6 : 10,
+        }}
+      >
+        <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>
+          Visibilité
+        </div>
+        <button
+          onClick={() => setMinimized((v) => !v)}
+          style={{
+            appearance: "none",
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(255,255,255,0.06)",
+            color: "white",
+            borderRadius: 10,
+            padding: "6px 9px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            lineHeight: 1,
+          }}
+          title={minimized ? "Expand" : "Minimize"}
+        >
+          {minimized ? "▾" : "▴"}
+        </button>
+      </div>
+
+      {!minimized && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showAxesHelper}
+              onChange={(e) => setShowAxesHelper(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
+            />
+            Repère X, Y, Z
+          </label>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showGrid}
+              onChange={(e) => setShowGrid(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
+            />
+            Grille XZ
+          </label>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showStockMarket}
+              onChange={(e) => setShowStockMarket(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
+            />
+            Stock Market
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function LegendHUD() {
   const [minimized, setMinimized] = useState(false);
@@ -335,7 +546,7 @@ function NodeBox({ node }) {
   );
 }
 
-function ShockwaveRing({ radius = 6, y = levelTimeline }) {
+function ShockwaveRing({ radius = 6, y = RING_Y }) {
   const ref = useRef();
   useFrame((_, dt) => {
     if (!ref.current) return;
@@ -353,7 +564,7 @@ function ShockwaveRing({ radius = 6, y = levelTimeline }) {
   );
 }
 
-function ImpactRing({ radius = 6, y = levelTimeline }) {
+function ImpactRing({ radius = 6, y = RING_Y }) {
   const sectors = useMemo(
     () => [
       { label: "Legal / Info", angle: 0.3 },
@@ -390,21 +601,152 @@ function ImpactRing({ radius = 6, y = levelTimeline }) {
   );
 }
 
-function Edges({ nodesById }) {
+function Timeline() {
+  const ticks = useMemo(() => {
+    const out = [];
+    for (let y = 2022; y <= 2026; y++) {
+      const d = new Date(y, 9, 4);
+      const z = dateToTimelineZ(d);
+      out.push({ year: y, z });
+    }
+    return out;
+  }, []);
+
   return (
-    <>
-      {EDGES.map(([a, b]) => (
-        <Line key={`${a}-${b}`} points={[nodesById[a].pos, nodesById[b].pos]} lineWidth={1} />
+    <group position={[0, TIMELINE_Y, 0]}>
+      <Line
+        points={[[0, 0, TIMELINE_Z_MIN], [0, 0, TIMELINE_Z_MAX]]}
+        color="#64748b"
+        lineWidth={1.5}
+      />
+      {ticks.map(({ year, z }) => (
+        <group key={year}>
+          <Line points={[[0, 0, z], [0, 0.15, z]]} color="#94a3b8" lineWidth={1} />
+          <Text position={[0, -0.35, z]} fontSize={0.18} anchorX="center" anchorY="middle">
+            {year}
+          </Text>
+        </group>
       ))}
-    </>
+      <Text position={[0, 0.25, TIMELINE_Z_MAX + 0.5]} fontSize={0.16} anchorX="center" anchorY="middle">
+        Oct 2022
+      </Text>
+      <Text position={[0, 0.25, TIMELINE_Z_MIN - 0.5]} fontSize={0.16} anchorX="center" anchorY="middle">
+        Oct 2026
+      </Text>
+    </group>
   );
 }
 
-function Scene() {
-  const nodesById = useMemo(() => {
-    const m = {};
-    for (const n of NODES) m[n.id] = n;
-    return m;
+const AXES_LENGTH = 4;
+const GRID_SIZE = 20;
+const GRID_DIVISIONS = 20;
+
+function StockMarketPlane() {
+  const { min: priceMin, max: priceMax } = useMemo(() => getStockPriceBounds(), []);
+
+  const stockCurves = useMemo(() => {
+    return Object.entries(STOCKS).map(([name, { color, data }]) => ({
+      name,
+      color,
+      points: data.map(({ date, value }) => [
+        STOCK_PLANE_X,
+        priceToY(value, priceMin, priceMax),
+        dateToTimelineZ(date),
+      ]),
+    }));
+  }, [priceMin, priceMax]);
+
+  const planeWidth = TIMELINE_Z_MAX - TIMELINE_Z_MIN;
+  const planeHeight = STOCK_Y_RANGE;
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Plan semi-transparent YZ (rotation pour plan YZ : normal = X) */}
+      <mesh
+        position={[STOCK_PLANE_X, RING_Y + planeHeight / 2, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[planeWidth, planeHeight]} />
+        <meshBasicMaterial color="#0f172a" transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Courbes par stock */}
+      {stockCurves.map(({ name, color, points }) => (
+        <Line key={name} points={points} color={color} lineWidth={2} />
+      ))}
+      {/* Labels (noms des stocks) — au début de chaque courbe, dans le plan YZ (normale X) */}
+      {stockCurves.map(({ name, color, points }) => {
+        const [x, y, z] = points[0];
+        return (
+          <Text
+            key={name}
+            position={[x+0.1, y-0.2, z]}
+            rotation={[0, +Math.PI / 2, 0]}
+            fontSize={0.18}
+            anchorX="right"
+            anchorY="middle"
+            color={color}
+          >
+            {name}
+          </Text>
+        );
+      })}
+      {/* Échelle prix */}
+      <Text
+        position={[STOCK_PLANE_X, RING_Y + planeHeight + 0.3, TIMELINE_Z_MAX]}
+        fontSize={0.14}
+        anchorX="center"
+        anchorY="middle"
+      >
+        ${priceMax.toFixed(0)}
+      </Text>
+      <Text
+        position={[STOCK_PLANE_X, RING_Y - 0.2, TIMELINE_Z_MAX]}
+        fontSize={0.14}
+        anchorX="center"
+        anchorY="middle"
+      >
+        ${priceMin.toFixed(0)}
+      </Text>
+    </group>
+  );
+}
+
+function GridXZ() {
+  const grid = useMemo(
+    () => new THREE.GridHelper(GRID_SIZE, GRID_DIVISIONS, "#64748b", "#94a3b8"),
+    []
+  );
+  return <primitive object={grid} position={[0, RING_Y, 0]} />;
+}
+
+function AxesHelper() {
+  return (
+    <group position={[0, 0, 0]}>
+      <Line points={[[0, 0, 0], [AXES_LENGTH, 0, 0]]} color="#e11d48" lineWidth={2} />
+      <Line points={[[0, 0, 0], [0, AXES_LENGTH, 0]]} color="#22c55e" lineWidth={2} />
+      <Line points={[[0, 0, 0], [0, 0, AXES_LENGTH]]} color="#3b82f6" lineWidth={2} />
+      <Text position={[AXES_LENGTH + 0.3, 0, 0]} fontSize={0.25} anchorX="left" anchorY="middle" color="#e11d48">
+        X
+      </Text>
+      <Text position={[0, AXES_LENGTH + 0.3, 0]} fontSize={0.25} anchorX="center" anchorY="bottom" color="#22c55e">
+        Y
+      </Text>
+      <Text position={[0, 0, AXES_LENGTH + 0.3]} fontSize={0.25} anchorX="center" anchorY="middle" color="#3b82f6">
+        Z
+      </Text>
+    </group>
+  );
+}
+
+function Scene({ showAxesHelper = true, showGrid = false, showStockMarket = false }) {
+  const nodesWithPositions = useMemo(() => {
+    return NODES.map((n) => {
+      const pos = [...n.pos];
+      if (n.source?.date) {
+        pos[2] = dateToTimelineZ(n.source.date);
+      }
+      return { ...n, pos };
+    });
   }, []);
 
   return (
@@ -412,11 +754,14 @@ function Scene() {
       <ambientLight intensity={0.55} />
       <directionalLight position={[6, 10, 6]} intensity={1.1} />
 
-      <ImpactRing />
-      <ShockwaveRing />
+      {showAxesHelper && <AxesHelper />}
+      {showGrid && <GridXZ />}
+      {showStockMarket && <StockMarketPlane />}
+      <Timeline />
+      <ImpactRing radius={RING_RADIUS} y={RING_Y} />
+      <ShockwaveRing radius={RING_RADIUS} y={RING_Y} />
 
-      <Edges nodesById={nodesById} />
-      {NODES.map((n) => (
+      {nodesWithPositions.map((n) => (
         <NodeBox key={n.id} node={n} />
       ))}
 
@@ -426,13 +771,24 @@ function Scene() {
 }
 
 export default function App() {
+  const [showAxesHelper, setShowAxesHelper] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showStockMarket, setShowStockMarket] = useState(false);
+
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       <Canvas camera={{ position: [9, 6, 10], fov: 45 }}>
-        <Scene />
+        <Scene showAxesHelper={showAxesHelper} showGrid={showGrid} showStockMarket={showStockMarket} />
       </Canvas>
 
-      {/* HUD overlay */}
+      <VisibilityHUD
+        showAxesHelper={showAxesHelper}
+        setShowAxesHelper={setShowAxesHelper}
+        showGrid={showGrid}
+        setShowGrid={setShowGrid}
+        showStockMarket={showStockMarket}
+        setShowStockMarket={setShowStockMarket}
+      />
       <LegendHUD />
     </div>
   );
