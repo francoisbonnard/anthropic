@@ -7,9 +7,9 @@ const NODES = [
   // Y0 — Protocol / Standards
   { id: "mcp", label: "MCP / AAIF\n(standard layer)", pos: [0, -1.2, 0], size: [2.4, 0.35, 1.2],
     source: {
-      date: "2024-01-15",
+      date: "2025-12-09",
       link: "https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation",
-      metric: "Standard adopté par..."
+      metric: "Linux Foundation Announces the Formation of the Agentic AI Foundation (AAIF), Anchored by New Project Contributions Including Model Context Protocol (MCP), goose and AGENTS"
     }
    },
 
@@ -19,13 +19,42 @@ const NODES = [
   { id: "ccode", label: "Claude Code", pos: [-2.8, 1.1, -0.8], size: [1.4, 0.4, 0.9] },
 
   // Y2 — Distribution
-  { id: "snow", label: "Snowflake\n$200M", pos: [2.9, 2.0, -0.6], size: [1.6, 0.45, 1.0] },
-  { id: "msft", label: "Microsoft internal\n(Claude Code)", pos: [-3.2, 2.0, 0.9], size: [1.8, 0.45, 1.1] },
+  { id: "snow", label: "Snowflake\n$200M", pos: [2.9, 2.0, -0.6], size: [1.6, 0.45, 1.0],     
+    source: {
+    date: "2025-12-04",
+    link: "https://techcrunch.com/2025/12/04/anthropic-signs-200m-deal-to-bring-its-llms-to-snowflakes-customers/",
+    metric: "Anthropic signs $200M deal to bring its LLMs to Snowflake’s customers"
+  } },
+  { id: "msft", label: "Microsoft internal\n(Claude Code)", pos: [-3.2, 2.0, 0.9], size: [1.8, 0.45, 1.1],
+    source: {
+      date: "2026-01-26",
+      link: "https://www.webpronews.com/microsofts-claude-code-gamble-pitting-rival-ai-against-its-own-copilot-empire/",
+      metric: "Microsoft’s Claude Code Gamble: Pitting Rival AI Against Its Own Copilot Empire"
+    }
+   },
 
   // Y3 — Adoption
-  { id: "deloitte", label: "Deloitte\n470k seats", pos: [-1.6, 3.0, 1.6], size: [1.8, 0.5, 1.1] },
-  { id: "cognizant", label: "Cognizant\n350k seats", pos: [1.8, 3.0, 1.6], size: [1.9, 0.5, 1.1] },
-  { id: "dod", label: "DoD\n$200M ceiling", pos: [0.0, 3.3, -2.0], size: [2.1, 0.55, 1.1] },
+  { id: "deloitte", label: "Deloitte\n470k seats", pos: [-1.6, 3.0, 1.6], size: [1.8, 0.5, 1.1],
+    source: {
+      date: "2025-10-25",
+      link: "https://www.cnbc.com/2025/10/06/anthropic-deloitte-enterprise-ai.html",
+      metric: "Anthropic lands its biggest enterprise deployment ever with Deloitte deal"
+    }
+   },
+  { id: "cognizant", label: "Cognizant\n350k seats", pos: [1.8, 3.0, 1.6], size: [1.9, 0.5, 1.1],
+    source: {
+      date: "2025-11-04",
+      link: "https://www.anthropic.com/news/cognizant-partnership",
+      metric: "Cognizant will make Claude available to 350,000 employees, accelerating enterprise AI adoption and internal transformation"
+    }
+   },
+  { id: "dod", label: "DoD\n$200M ceiling", pos: [0.0, 3.3, -2.0], size: [2.1, 0.55, 1.1],
+    source: {
+      date: "2025-07-14",
+      link: "https://www.cnbc.com/2025/07/14/anthropic-google-openai-xai-granted-up-to-200-million-from-dod.html",
+      metric: "Anthropic, Google, OpenAI and xAI granted up to $200 million for AI work from Defense Department"
+    }
+   },
 ];
 
 const EDGES = [

@@ -7,6 +7,12 @@ import { OrbitControls, Text, Line, Html } from "@react-three/drei";
  * 5 layers (0..4)
  * - each layer has: name, meta, color
  */
+const level0 = -1.2;
+const level1 = 0;
+const level2 = 1.35;
+const level3 = 2.0;
+const level4 = 3.0;
+
 const LAYERS = {
   0: {
     name: "L0 — Protocol & Standards",
@@ -46,13 +52,13 @@ const NODES = [
     id: "mcp",
     layer: 0,
     label: "MCP / AAIF\n(standard layer)",
-    pos: [0, -1.2, 0],
+    pos: [0, level0, 0],
     size: [2.4, 0.35, 1.2],
     source: {
-      date: "2024-01-15",
-      link: "https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation",
-      metric: "Standard adopté par...",
-    },
+        date: "2025-12-09",
+        link: "https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation",
+        metric: "Linux Foundation Announces the Formation of the Agentic AI Foundation (AAIF), Anchored by New Project Contributions Including Model Context Protocol (MCP), goose and AGENTS"
+      },
   },
 
   // L1 — Core AI runtime
@@ -63,13 +69,43 @@ const NODES = [
   { id: "cowork", layer: 2, label: "Cowork + Plugins\n(open-source)", pos: [0, 1.35, 0], size: [2.2, 0.5, 1.2] },
 
   // L3 — Distribution
-  { id: "snow", layer: 3, label: "Snowflake\n$200M", pos: [2.9, 2.0, -0.6], size: [1.6, 0.45, 1.0] },
-  { id: "msft", layer: 3, label: "Microsoft internal\n(Claude Code)", pos: [-3.2, 2.0, 0.9], size: [1.8, 0.45, 1.1] },
+  { id: "snow", layer: 3, label: "Snowflake\n$200M", pos: [2.9, 2.0, -0.6], size: [1.6, 0.45, 1.0],
+    source: {
+        date: "2025-12-04",
+        link: "https://techcrunch.com/2025/12/04/anthropic-signs-200m-deal-to-bring-its-llms-to-snowflakes-customers/",
+        metric: "Anthropic signs $200M deal to bring its LLMs to Snowflake’s customers"
+      } 
+   },
+  { id: "msft", layer: 3, label: "Microsoft internal\n(Claude Code)", pos: [-3.2, 2.0, 0.9], size: [1.8, 0.45, 1.1],
+    source: {
+        date: "2026-01-26",
+        link: "https://www.webpronews.com/microsofts-claude-code-gamble-pitting-rival-ai-against-its-own-copilot-empire/",
+        metric: "Microsoft’s Claude Code Gamble: Pitting Rival AI Against Its Own Copilot Empire"
+      }
+   },
 
   // L4 — Adoption / Regulated deployment
-  { id: "deloitte", layer: 4, label: "Deloitte\n470k seats", pos: [-1.6, 3.0, 1.6], size: [1.8, 0.5, 1.1] },
-  { id: "cognizant", layer: 4, label: "Cognizant\n350k seats", pos: [1.8, 3.0, 1.6], size: [1.9, 0.5, 1.1] },
-  { id: "dod", layer: 4, label: "DoD\n$200M ceiling", pos: [0.0, 3.3, -2.0], size: [2.1, 0.55, 1.1] },
+  { id: "deloitte", layer: 4, label: "Deloitte\n470k seats", pos: [-1.6, 3.0, 1.6], size: [1.8, 0.5, 1.1],
+    source: {
+        date: "2025-10-25",
+        link: "https://www.cnbc.com/2025/10/06/anthropic-deloitte-enterprise-ai.html",
+        metric: "Anthropic lands its biggest enterprise deployment ever with Deloitte deal"
+      }
+   },
+  { id: "cognizant", layer: 4, label: "Cognizant\n350k seats", pos: [1.8, 3.0, 1.6], size: [1.9, 0.5, 1.1],
+    source: {
+        date: "2025-11-04",
+        link: "https://www.anthropic.com/news/cognizant-partnership",
+        metric: "Cognizant will make Claude available to 350,000 employees, accelerating enterprise AI adoption and internal transformation"
+      }
+   },
+  { id: "dod", layer: 4, label: "DoD\n$200M ceiling", pos: [0.0, 3.3, -2.0], size: [2.1, 0.55, 1.1],
+    source: {
+        date: "2025-07-14",
+        link: "https://www.cnbc.com/2025/07/14/anthropic-google-openai-xai-granted-up-to-200-million-from-dod.html",
+        metric: "Anthropic, Google, OpenAI and xAI granted up to $200 million for AI work from Defense Department"
+      }
+   },
 ];
 
 const EDGES = [
@@ -176,7 +212,7 @@ function LegendHUD() {
 
       {!minimized && (
         <div style={{ marginTop: 10, fontSize: 10.5, opacity: 0.75, lineHeight: 1.25 }}>
-          Tip: survole un bloc pour voir les sources (si renseignées). La couleur du bloc correspond à son layer.
+          Copyright : francois.bonnard@arrow.com
         </div>
       )}
     </div>
@@ -298,7 +334,7 @@ function NodeBox({ node }) {
   );
 }
 
-function ShockwaveRing({ radius = 6, y = 1.3 }) {
+function ShockwaveRing({ radius = 6, y = level0 }) {
   const ref = useRef();
   useFrame((_, dt) => {
     if (!ref.current) return;
@@ -316,7 +352,7 @@ function ShockwaveRing({ radius = 6, y = 1.3 }) {
   );
 }
 
-function ImpactRing({ radius = 6, y = 1.3 }) {
+function ImpactRing({ radius = 6, y = level0 }) {
   const sectors = useMemo(
     () => [
       { label: "Legal / Info", angle: 0.3 },
