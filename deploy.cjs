@@ -17,11 +17,17 @@ const ftpDeploy = new FtpDeploy();
 
 const useSftp = process.env.FTP_SFTP === "true";
 const defaultPort = useSftp ? 22 : 21;
+// SFTP nécessite l'hôte SSH (ssh.clusterXXX), pas l'hôte FTP (ftp.clusterXXX)
+let host = process.env.FTP_HOST;
+if (useSftp && host?.startsWith("ftp.")) {
+  host = host.replace("ftp.", "ssh.");
+  console.log("SFTP: utilisation de l'hôte SSH", host, "(au lieu de ftp.*)");
+}
 
 const config = {
   user: process.env.FTP_USER,
   password: process.env.FTP_PASSWORD,
-  host: process.env.FTP_HOST,
+  host,
   port: parseInt(process.env.FTP_PORT || String(defaultPort), 10),
   localRoot: path.join(__dirname, "dist"),
   remoteRoot: process.env.FTP_REMOTE_PATH || "/anthropic/",
