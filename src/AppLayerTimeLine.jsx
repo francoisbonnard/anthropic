@@ -1,20 +1,14 @@
 import React, { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
 import { STOCKS, getStockPriceBounds } from "./stockData";
+import { NODES } from "./nodes";
 
 /**
- * 6 layers (0..5)
+ * 7 layers (0..6)
  * - each layer has: name, meta, color
  */
-
-const level0 = -1.2;
-const level1 = 0;
-const level2 = 1.35;
-const level3 = 2.0;
-const level4 = 3.0;
-const level5 = 4.0;
 
 // Timeline: 04 oct 2022 → 04 oct 2026, sur un layer sous layer0
 const TIMELINE_START = new Date(2022, 9, 4); // mois 0-indexé
@@ -46,175 +40,47 @@ const LAYERS = {
     name: "L0 — Protocol & Standards",
     color: "#22c55e",
     meta:
-      "Standards d’interopérabilité (protocoles, formats, conventions) qui réduisent le coût d’intégration et déverrouillent l’écosystème agent↔tools↔data.",
+      "Standards d’interopérabilité (protocoles, formats, conventions, schémas) qui réduisent le coût d’intégration et rendent possible l’écosystème models ↔ agents ↔ tools ↔ data.",
   },
   1: {
-    name: "L1 — Model & Agent Runtime (Core AI)",
-    color: "#60a5fa",
+    name: "L1 — Foundation Models",
+    color: "#38bdf8",
     meta:
-      "Capacités fondamentales : modèles, exécution agentique, raisonnement, orchestration. Le moteur qui transforme un intent en plan + actions.",
+      "Modèles fondamentaux (LLMs, multimodaux) fournissant les capacités cognitives brutes : compréhension, génération, raisonnement, vision, audio. Aucune action directe : uniquement de l'inférence.",
   },
   2: {
-    name: "L2 — Tooling & Workflow Surface (Product Layer)",
-    color: "#f59e0b",
+    name: "L2 — Agent Systems",
+    color: "#6366f1",
     meta:
       "Interface opérable (cowork, plugins, IDE agents) où l’agent devient une UI de travail et remplace des écrans SaaS par des actions automatisées.",
   },
   3: {
-    name: "L3 — Distribution & Platforms",
+    name: "L3 — Workflow / Product Surface",
     color: "#a78bfa",
     meta:
-      "Canaux de diffusion (data platforms, hyperscalers, suites internes) qui packagent l’agent et le mettent au contact des clients via bundles, marketplaces ou déploiements internes.",
+      "Interfaces opérables (IDE agents, copilots, cowork, plugins) où l'agent devient l'UI principale et remplace des écrans SaaS par des actions et workflows automatisés. l’agent et le mettent au contact des clients via bundles, marketplaces ou déploiements internes.",
   },
   4: {
-    name: "L4 — Enterprise Adoption & Regulated Deployment",
-    color: "#ef4444",
+    name: "L4 — Distribution & Platforms",
+    color: "#f59e0b",
     meta:
-      "Déploiements massifs (SI/consulting, grands comptes, défense/régulé) avec gouvernance, conformité, sécurité, contrôle des risques et industrialisation.",
+      "Canaux de diffusion (hyperscalers, marketplaces, data platforms, suites internes) qui packagent les agents et les exposent aux clients via bundles, catalogues ou déploiements managés.",
   },
   5: {
     name: "L5 — Market Analysis",
     color: "#06b6d4",
     meta:
-      "Analyses de marché et prédictions sur l'adoption, la productivité et les risques des projets IA agentique.",
+      "Analyses de marché et signaux (adoption, productivité, risques, pricing, concentration) pour anticiper les gagnants, les shifts de valeur et les dynamiques de commoditisation.",
+  },
+  6: {
+    name: "L6 — Enterprise Adoption & Regulated Deployment",
+    color: "#ef4444",
+    meta:
+      "Déploiements massifs en environnements entreprise ou régulés avec gouvernance, conformité, sécurité, auditabilité, contrôle des risques et industrialisation.",
   },
 };
 
-const NODES = [
-  // L0 — Protocol / Standards
-  {
-    id: "mcp",
-    layer: 0,
-    label: "MCP / AAIF\n(standard layer)",
-    pos: [0, level0, 0],
-    size: [2.4, 0.35, 1.2],
-    source: {
-        date: "2025-12-09",
-        link: "https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation",
-        metric: "Linux Foundation Announces the Formation of the Agentic AI Foundation (AAIF), Anchored by New Project Contributions Including Model Context Protocol (MCP), goose and AGENTS"
-      },
-  },
 
-  {
-    id: "mcp",
-    layer: 0,
-    label: "MCP",
-    pos: [0, level0, 0],
-    size: [2.4, 0.35, 1.2],
-    source: {
-        date: "2024-11-25",
-        link: "https://www.anthropic.com/news/model-context-protocol",
-        metric: "Introducing the Model Context Protocol"
-      },
-  },
-  // L1 — Core AI runtime
-  { id: "Claude 3 Opus", layer: 1, label: "Claude 3 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
-    source: {
-      date: "2024-03-01",
-      link: "",
-      metric: "Claude 3 Opus"
-    },
-   },
-  { id: "Claude 3.5 Sonnet", layer: 1, label: "Claude 3.5 Sonnet", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
-    source: {
-      date: "2024-06-01",
-      link: "",
-      metric: "Claude 3.5 Sonnet"
-    },
-   },
-  { id: "Claude 4.5 Sonnet", layer: 1, label: "Claude 4.5 Sonnet", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
-    source: {
-      date: "2025-09-01",
-      link: "",
-      metric: "Claude 4.5 Sonnet"
-    },
-   },
-  { id: "Claude 4.5 Opus", layer: 1, label: "Claude 4.5 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
-    source: {
-      date: "2025-11-01",
-      link: "",
-      metric: "Claude 4.5 Opus"
-    },
-   },
-   { id: "Claude 4.6 Opus", layer: 1, label: "Claude 4.6 Opus", pos: [0, 0, 0], size: [1.6, 0.45, 1.0],
-    source: {
-      date: "2026-02-16",
-      link: "https://xpert.digital/en/saas-apocalypse-on-wall-street/",
-      metric: "SaaS Apocalypse"
-    },
-   },
-
-
-  { id: "ccode", layer: 1, label: "Claude Code", pos: [-2.8, 1.1, -0.8], size: [1.4, 0.4, 0.9] },
-
-  // L2 — Tooling / workflow UI
-  { id: "cowork", layer: 2, label: "Cowork + Plugins\n(open-source)", pos: [0, 1.35, 0], size: [2.2, 0.5, 1.2] },
-
-  // L3 — Distribution
-  { id: "snow", layer: 3, label: "Snowflake\n$200M", pos: [2.9, 2.0, -0.6], size: [1.6, 0.45, 1.0],
-    source: {
-        date: "2025-12-04",
-        link: "https://techcrunch.com/2025/12/04/anthropic-signs-200m-deal-to-bring-its-llms-to-snowflakes-customers/",
-        metric: "Anthropic signs $200M deal to bring its LLMs to Snowflake’s customers"
-      } 
-   },
-  { id: "msft", layer: 3, label: "Microsoft internal\n(Claude Code)", pos: [-3.2, 2.0, 0.9], size: [1.8, 0.45, 1.1],
-    source: {
-        date: "2026-01-26",
-        link: "https://www.webpronews.com/microsofts-claude-code-gamble-pitting-rival-ai-against-its-own-copilot-empire/",
-        metric: "Microsoft’s Claude Code Gamble: Pitting Rival AI Against Its Own Copilot Empire"
-      }
-   },
-
-  // L4 — Adoption / Regulated deployment
-  { id: "deloitte", layer: 4, label: "Deloitte\n470k seats", pos: [-1.6, 3.0, 1.6], size: [1.8, 0.5, 1.1],
-    source: {
-        date: "2025-10-25",
-        link: "https://www.cnbc.com/2025/10/06/anthropic-deloitte-enterprise-ai.html",
-        metric: "Anthropic lands its biggest enterprise deployment ever with Deloitte deal"
-      }
-   },
-  { id: "cognizant", layer: 4, label: "Cognizant\n350k seats", pos: [1.8, 3.0, 1.6], size: [1.9, 0.5, 1.1],
-    source: {
-        date: "2025-11-04",
-        link: "https://www.anthropic.com/news/cognizant-partnership",
-        metric: "Cognizant will make Claude available to 350,000 employees, accelerating enterprise AI adoption and internal transformation"
-      }
-   },
-  { id: "dod", layer: 4, label: "DoD\n$200M ceiling", pos: [0.0, 3.3, -2.0], size: [2.1, 0.55, 1.1],
-    source: {
-        date: "2025-07-14",
-        link: "https://www.cnbc.com/2025/07/14/anthropic-google-openai-xai-granted-up-to-200-million-from-dod.html",
-        metric: "Anthropic, Google, OpenAI and xAI granted up to $200 million for AI work from Defense Department"
-      }
-   },
-
-  // L5 — Market Analysis
-  {
-    id: "gartner",
-    layer: 5,
-    label: "2027 : 40% agentic AI projects cancelled",
-    pos: [-2.5, level5, 0],
-    size: [2.0, 0.45, 1.0],
-    source: {
-      date: "2025-06-25",
-      link: "https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027",
-      metric: "40% projets IA agentique annulés d'ici 2027",
-    },
-  },
-  {
-    id: "goldman",
-    layer: 5,
-    label: "Goldman Sachs : Agents to boost productivity",
-    pos: [2.5, level5, 0],
-    size: [2.2, 0.45, 1.0],
-    source: {
-      date: "2025-07-03",
-      link: "https://www.goldmansachs.com/insights/articles/ai-agents-to-boost-productivity-and-size-of-software-market",
-      metric: "AI Agents to Boost Productivity and Size of Software Market",
-    },
-  },
-];
 
 function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket }) {
   const [minimized, setMinimized] = useState(false);
@@ -331,10 +197,12 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
   );
 }
 
-function LegendHUD() {
+const DEFAULT_LAYER_VISIBILITY = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true };
+
+function LegendHUD({ layerVisibility, setLayerVisibility }) {
   const [minimized, setMinimized] = useState(false);
 
-  // Inverse order: L4 top ... L0 bottom
+  // Inverse order: L6 top ... L0 bottom
   const layerKeys = useMemo(
     () => Object.keys(LAYERS).map(Number).sort((a, b) => b - a),
     []
@@ -346,8 +214,8 @@ function LegendHUD() {
         position: "absolute",
         right: 14,
         bottom: 14,
-        width: minimized ? 240 : 380,
-        maxWidth: `min(${minimized ? 240 : 380}px, calc(100vw - 28px))`,
+        width: minimized ? 240 : 480,
+        maxWidth: `min(${minimized ? 240 : 480}px, calc(100vw - 28px))`,
         background: "rgba(0,0,0,0.72)",
         color: "white",
         borderRadius: 14,
@@ -368,7 +236,13 @@ function LegendHUD() {
           marginBottom: minimized ? 6 : 10,
         }}
       >
-        <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>
+        <div
+          style={{
+            fontWeight: 900,
+            fontSize: minimized ? 13 : 19.5,
+            letterSpacing: 0.2,
+          }}
+        >
           Layers legend
         </div>
 
@@ -392,38 +266,66 @@ function LegendHUD() {
         </button>
       </div>
 
-      {/* Minimized = compact list (color + label only). Expanded = label + meta */}
-      <div style={{ display: "flex", flexDirection: "column", gap: minimized ? 7 : 10 }}>
+      {/* Minimized = compact list. Expanded = label + meta + visibility toggle */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: minimized ? 7 : 10,
+          listStyle: "none",
+          paddingLeft: 0,
+        }}
+      >
         {layerKeys.map((k) => {
           const l = LAYERS[k];
+          const visible = layerVisibility?.[k] ?? true;
           return (
             <div key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div
+              <label
                 style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 999,
-                  background: l.color,
-                  marginTop: 4,
-                  flex: "0 0 auto",
-                  boxShadow: "0 0 0 2px rgba(255,255,255,0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                  flex: 1,
+                  minWidth: 0,
                 }}
-              />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 12, marginBottom: minimized ? 0 : 3 }}>
-                  {l.name}
+              >
+                <input
+                  type="checkbox"
+                  checked={visible}
+                  onChange={(e) =>
+                    setLayerVisibility?.((prev) => ({ ...prev, [k]: e.target.checked }))
+                  }
+                  style={{
+                    width: minimized ? 16 : 24,
+                    height: minimized ? 16 : 24,
+                    accentColor: l.color,
+                    flex: "0 0 auto",
+                  }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: minimized ? 12 : 18,
+                      marginBottom: minimized ? 0 : 3,
+                    }}
+                  >
+                    {l.name}
+                  </div>
+                  {!minimized && (
+                    <div style={{ fontSize: 16.5, opacity: 0.9, lineHeight: 1.25 }}>{l.meta}</div>
+                  )}
                 </div>
-                {!minimized && (
-                  <div style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.25 }}>{l.meta}</div>
-                )}
-              </div>
+              </label>
             </div>
           );
         })}
       </div>
 
       {!minimized && (
-        <div style={{ marginTop: 10, fontSize: 10.5, opacity: 0.75, lineHeight: 1.25 }}>
+        <div style={{ marginTop: 10, fontSize: 15.75, opacity: 0.75, lineHeight: 1.25 }}>
           Copyright : francois.bonnard@arrow.com
         </div>
       )}
@@ -431,24 +333,39 @@ function LegendHUD() {
   );
 }
 
-function NodeBox({ node }) {
-  const [hover, setHover] = useState(false);
+const LERP_FACTOR = 0.08;
+const FLY_TO_DISTANCE = 6;
+const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_TO_DISTANCE);
+
+// Fit frame: vue d'ensemble centrée sur la scène
+const FIT_TARGET = [0, 1, 0];
+const FIT_CAMERA_OFFSET = new THREE.Vector3(12, 10, 12);
+
+function NodeBox({ node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
+  const hover = hoveredNodeKey === nodeKey;
 
   const layerInfo = LAYERS[node.layer] ?? { name: "Layer ?", color: "#9ca3af", meta: "" };
 
   return (
     <group position={node.pos}>
       <mesh
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick?.(node.pos);
+        }}
         onPointerEnter={() => {
           if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+          leaveTimeout.current = null;
           isPointerOverTooltip.current = false;
-          setHover(true);
+          setHoveredNodeKey(nodeKey);
         }}
         onPointerLeave={() => {
           if (!isPointerOverTooltip.current) {
-            leaveTimeout.current = setTimeout(() => setHover(false), 200);
+            leaveTimeout.current = setTimeout(() => {
+              setHoveredNodeKey((prev) => (prev === nodeKey ? null : prev));
+            }, 200);
           }
         }}
       >
@@ -484,11 +401,12 @@ function NodeBox({ node }) {
               e.stopPropagation();
               isPointerOverTooltip.current = true;
               if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
-              setHover(true);
+              leaveTimeout.current = null;
+              setHoveredNodeKey(nodeKey);
             }}
             onPointerLeave={() => {
               isPointerOverTooltip.current = false;
-              setHover(false);
+              setHoveredNodeKey((prev) => (prev === nodeKey ? null : prev));
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -738,7 +656,54 @@ function AxesHelper() {
   );
 }
 
-function Scene({ showAxesHelper = true, showGrid = false, showStockMarket = false }) {
+function SmoothFlyTo({ target, onComplete, controlsRef }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    if (!target || !controlsRef?.current) return;
+    const controls = controlsRef.current;
+    const targetPos = new THREE.Vector3(...target);
+    const cameraPos = targetPos.clone().add(FLY_TO_OFFSET);
+    controls.target.lerp(targetPos, LERP_FACTOR);
+    camera.position.lerp(cameraPos, LERP_FACTOR);
+    if (controls.target.distanceTo(targetPos) < 0.01 && camera.position.distanceTo(cameraPos) < 0.01) {
+      controls.target.copy(targetPos);
+      camera.position.copy(cameraPos);
+      onComplete?.();
+    }
+  });
+  return null;
+}
+
+function SmoothFitFrame({ onComplete, controlsRef }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    if (!controlsRef?.current) return;
+    const controls = controlsRef.current;
+    const targetPos = new THREE.Vector3(...FIT_TARGET);
+    const cameraPos = targetPos.clone().add(FIT_CAMERA_OFFSET);
+    controls.target.lerp(targetPos, LERP_FACTOR);
+    camera.position.lerp(cameraPos, LERP_FACTOR);
+    if (controls.target.distanceTo(targetPos) < 0.01 && camera.position.distanceTo(cameraPos) < 0.01) {
+      controls.target.copy(targetPos);
+      camera.position.copy(cameraPos);
+      onComplete?.();
+    }
+  });
+  return null;
+}
+
+function Scene({
+  showAxesHelper = true,
+  showGrid = false,
+  showStockMarket = false,
+  layerVisibility = DEFAULT_LAYER_VISIBILITY,
+  fitFrame = false,
+  setFitFrame,
+  flyToTarget,
+  setFlyToTarget,
+}) {
+  const [hoveredNodeKey, setHoveredNodeKey] = useState(null);
+  const controlsRef = useRef(null);
   const nodesWithPositions = useMemo(() => {
     return NODES.map((n) => {
       const pos = [...n.pos];
@@ -761,24 +726,74 @@ function Scene({ showAxesHelper = true, showGrid = false, showStockMarket = fals
       <ImpactRing radius={RING_RADIUS} y={RING_Y} />
       <ShockwaveRing radius={RING_RADIUS} y={RING_Y} />
 
-      {nodesWithPositions.map((n) => (
-        <NodeBox key={n.id} node={n} />
-      ))}
+      {nodesWithPositions
+        .map((n, i) => ({ n, i }))
+        .filter(({ n }) => layerVisibility[n.layer] !== false)
+        .map(({ n, i }) => (
+          <NodeBox
+            key={`${n.id}-${i}`}
+            node={n}
+            nodeKey={`${n.id}-${i}`}
+            hoveredNodeKey={hoveredNodeKey}
+            setHoveredNodeKey={setHoveredNodeKey}
+            onDoubleClick={(pos) => setFlyToTarget(pos)}
+          />
+        ))}
 
-      <OrbitControls makeDefault />
+      <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.05} />
+      {flyToTarget && !fitFrame && (
+        <SmoothFlyTo
+          target={flyToTarget}
+          controlsRef={controlsRef}
+          onComplete={() => setFlyToTarget(null)}
+        />
+      )}
+      {fitFrame && (
+        <SmoothFitFrame
+          controlsRef={controlsRef}
+          onComplete={() => setFitFrame?.(false)}
+        />
+      )}
     </>
   );
 }
 
 export default function App() {
-  const [showAxesHelper, setShowAxesHelper] = useState(true);
+  const [showAxesHelper, setShowAxesHelper] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
-  const [showStockMarket, setShowStockMarket] = useState(false);
+  const [showStockMarket, setShowStockMarket] = useState(true);
+  const [layerVisibility, setLayerVisibility] = useState(DEFAULT_LAYER_VISIBILITY);
+  const [fitFrame, setFitFrame] = useState(false);
+  const [flyToTarget, setFlyToTarget] = useState(null);
+  const lastPointerMissRef = useRef(0);
+
+  const handlePointerMissed = () => {
+    const now = Date.now();
+    if (now - lastPointerMissRef.current < 400) {
+      setFlyToTarget(null);
+      setFitFrame(true);
+      lastPointerMissRef.current = 0;
+    } else {
+      lastPointerMissRef.current = now;
+    }
+  };
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <Canvas camera={{ position: [9, 6, 10], fov: 45 }}>
-        <Scene showAxesHelper={showAxesHelper} showGrid={showGrid} showStockMarket={showStockMarket} />
+      <Canvas
+        camera={{ position: [9, 6, 10], fov: 45 }}
+        onPointerMissed={handlePointerMissed}
+      >
+        <Scene
+          showAxesHelper={showAxesHelper}
+          showGrid={showGrid}
+          showStockMarket={showStockMarket}
+          layerVisibility={layerVisibility}
+          fitFrame={fitFrame}
+          setFitFrame={setFitFrame}
+          flyToTarget={flyToTarget}
+          setFlyToTarget={setFlyToTarget}
+        />
       </Canvas>
 
       <VisibilityHUD
@@ -789,7 +804,7 @@ export default function App() {
         showStockMarket={showStockMarket}
         setShowStockMarket={setShowStockMarket}
       />
-      <LegendHUD />
+      <LegendHUD layerVisibility={layerVisibility} setLayerVisibility={setLayerVisibility} />
     </div>
   );
 }
