@@ -67,16 +67,16 @@ const LAYERS = {
       "Canaux de diffusion (hyperscalers, marketplaces, data platforms, suites internes) qui packagent les agents et les exposent aux clients via bundles, catalogues ou déploiements managés.",
   },
   5: {
-    name: "L5 — Market Analysis",
-    color: "#06b6d4",
-    meta:
-      "Analyses de marché et signaux (adoption, productivité, risques, pricing, concentration) pour anticiper les gagnants, les shifts de valeur et les dynamiques de commoditisation.",
-  },
-  6: {
-    name: "L6 — Enterprise Adoption & Regulated Deployment",
+    name: "L5 — Enterprise Adoption & Regulated Deployment",
     color: "#ef4444",
     meta:
       "Déploiements massifs en environnements entreprise ou régulés avec gouvernance, conformité, sécurité, auditabilité, contrôle des risques et industrialisation.",
+  },
+  6: {
+    name: "L6 — Market Analysis",
+    color: "#06b6d4",
+    meta:
+      "Analyses de marché et signaux (adoption, productivité, risques, pricing, concentration) pour anticiper les gagnants, les shifts de valeur et les dynamiques de commoditisation.",
   },
 };
 
@@ -597,7 +597,7 @@ function StockMarketPlane() {
         return (
           <Text
             key={name}
-            position={[x+0.1, y-0.2, z]}
+            position={[x+0.1, y, z+0.2]}
             rotation={[0, +Math.PI / 2, 0]}
             fontSize={0.18}
             anchorX="right"
