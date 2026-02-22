@@ -6,6 +6,22 @@ require("dotenv").config();
 
 const FtpDeploy = require("ftp-deploy");
 const path = require("path");
+const fs = require("fs");
+
+// #region agent log
+function dbg(msg, data = {}) {
+  const payload = JSON.stringify({
+    sessionId: "ce59f2",
+    location: "deploy.cjs",
+    message: msg,
+    data,
+    timestamp: Date.now(),
+  }) + "\n";
+  try {
+    fs.appendFileSync(path.join(__dirname, "debug-ce59f2.log"), payload);
+  } catch (_) {}
+}
+// #endregion
 
 if (!process.env.FTP_USER || !process.env.FTP_PASSWORD || !process.env.FTP_HOST) {
   console.error("Erreur: définissez FTP_USER, FTP_PASSWORD et FTP_HOST dans le fichier .env");
@@ -82,6 +98,9 @@ ftpDeploy.on("upload-error", (data) => {
 });
 
 function doDeploy(cfg, useNewInstance = false) {
+  // #region agent log
+  if (useNewInstance) dbg("doDeploy FTP (new instance)", { host: cfg.host, port: cfg.port });
+  // #endregion
   const deployer = useNewInstance ? new FtpDeploy() : ftpDeploy;
   if (useNewInstance) {
     deployer.on("uploading", (data) => {
@@ -102,6 +121,9 @@ function doDeploy(cfg, useNewInstance = false) {
 }
 
 doDeploy(config).catch((err) => {
+  // #region agent log
+  dbg("SFTP deploy failed", { errMsg: err?.message, useSftp });
+  // #endregion
   // Fallback: si SFTP échoue (OVH connu pour "Unexpected end"), réessayer en FTP
   if (useSftp && err.message?.includes("Unexpected end")) {
     console.log("SFTP échoué, tentative avec FTP...");
@@ -109,16 +131,34 @@ doDeploy(config).catch((err) => {
       ...config,
       sftp: false,
       host: process.env.FTP_HOST?.replace("ssh.", "ftp.") || process.env.FTP_HOST,
-      port: parseInt(process.env.FTP_PORT || "21", 10),
+      port: 21,
       forcePasv: true,
     };
     delete ftpConfig.algorithms;
     delete ftpConfig.forceIPv4;
     delete ftpConfig.readyTimeout;
-    return doDeploy(ftpConfig, true);
+    // #region agent log
+    dbg("FTP fallback starting", { host: ftpConfig.host, port: ftpConfig.port, remoteRoot: ftpConfig.remoteRoot });
+    // #endregion
+    return doDeploy(ftpConfig, true).then(
+      () => {
+        // #region agent log
+        dbg("FTP fallback SUCCESS");
+        // #endregion
+      },
+      (ftpErr) => {
+        // #region agent log
+        dbg("FTP fallback FAILED", { errMsg: ftpErr?.message });
+        // #endregion
+        throw ftpErr;
+      }
+    );
   }
   throw err;
 }).catch((err) => {
+  // #region agent log
+  dbg("Final catch", { errMsg: err?.message });
+  // #endregion
   console.error("Erreur de déploiement:", err.message);
   if (!process.env.FTP_USER || !process.env.FTP_PASSWORD || !process.env.FTP_HOST) {
     console.error("\nVérifiez que les variables FTP_USER, FTP_PASSWORD et FTP_HOST sont définies (fichier .env).");
