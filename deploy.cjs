@@ -13,7 +13,7 @@ if (!process.env.FTP_USER || !process.env.FTP_PASSWORD || !process.env.FTP_HOST)
   process.exit(1);
 }
 
-const ftpDeploy = new FtpDeploy();
+let ftpDeploy = new FtpDeploy();
 
 const useSftp = process.env.FTP_SFTP === "true";
 const defaultPort = useSftp ? 22 : 21;
@@ -81,13 +81,47 @@ ftpDeploy.on("upload-error", (data) => {
   console.error(`Erreur: ${data.filename}`, data.err);
 });
 
-ftpDeploy
-  .deploy(config)
-  .then(() => console.log("Déploiement FTP terminé avec succès."))
-  .catch((err) => {
-    console.error("Erreur de déploiement:", err.message);
-    if (!process.env.FTP_USER || !process.env.FTP_PASSWORD || !process.env.FTP_HOST) {
-      console.error("\nVérifiez que les variables FTP_USER, FTP_PASSWORD et FTP_HOST sont définies (fichier .env).");
-    }
-    process.exit(1);
+function doDeploy(cfg, useNewInstance = false) {
+  const deployer = useNewInstance ? new FtpDeploy() : ftpDeploy;
+  if (useNewInstance) {
+    deployer.on("uploading", (data) => {
+      console.log(
+        `[${data.transferredFileCount}/${data.totalFilesCount}] ${data.filename}`
+      );
+    });
+    deployer.on("uploaded", (data) => {
+      console.log(`Uploadé: ${data.filename}`);
+    });
+    deployer.on("upload-error", (data) => {
+      console.error(`Erreur: ${data.filename}`, data.err);
+    });
+  }
+  return deployer.deploy(cfg).then(() => {
+    console.log("Déploiement terminé avec succès.");
   });
+}
+
+doDeploy(config).catch((err) => {
+  // Fallback: si SFTP échoue (OVH connu pour "Unexpected end"), réessayer en FTP
+  if (useSftp && err.message?.includes("Unexpected end")) {
+    console.log("SFTP échoué, tentative avec FTP...");
+    const ftpConfig = {
+      ...config,
+      sftp: false,
+      host: process.env.FTP_HOST?.replace("ssh.", "ftp.") || process.env.FTP_HOST,
+      port: parseInt(process.env.FTP_PORT || "21", 10),
+      forcePasv: true,
+    };
+    delete ftpConfig.algorithms;
+    delete ftpConfig.forceIPv4;
+    delete ftpConfig.readyTimeout;
+    return doDeploy(ftpConfig, true);
+  }
+  throw err;
+}).catch((err) => {
+  console.error("Erreur de déploiement:", err.message);
+  if (!process.env.FTP_USER || !process.env.FTP_PASSWORD || !process.env.FTP_HOST) {
+    console.error("\nVérifiez que les variables FTP_USER, FTP_PASSWORD et FTP_HOST sont définies (fichier .env).");
+  }
+  process.exit(1);
+});

@@ -80,9 +80,52 @@ const LAYERS = {
   },
 };
 
+const T = {
+  fr: {
+    layersLegend: "Légende des layers",
+    expand: "Développer",
+    minimize: "Réduire",
+    visibility: "Visibilité",
+    axesHelper: "Repère X, Y, Z",
+    gridXZ: "Grille XZ",
+    stockMarket: "Stock Market",
+    date: "Date",
+    link: "Lien",
+    metric: "Métrique",
+    layers: {
+      0: { name: "L0 — Protocol & Standards", meta: "Standards d'interopérabilité (protocoles, formats, conventions, schémas) qui réduisent le coût d'intégration et rendent possible l'écosystème models ↔ agents ↔ tools ↔ data." },
+      1: { name: "L1 — Foundation Models", meta: "Modèles fondamentaux (LLMs, multimodaux) fournissant les capacités cognitives brutes : compréhension, génération, raisonnement, vision, audio. Aucune action directe : uniquement de l'inférence." },
+      2: { name: "L2 — Agent Systems", meta: "Interface opérable (cowork, plugins, IDE agents) où l'agent devient une UI de travail et remplace des écrans SaaS par des actions automatisées." },
+      3: { name: "L3 — Workflow / Product Surface", meta: "Interfaces opérables (IDE agents, copilots, cowork, plugins) où l'agent devient l'UI principale et remplace des écrans SaaS par des actions et workflows automatisés." },
+      4: { name: "L4 — Distribution & Platforms", meta: "Canaux de diffusion (hyperscalers, marketplaces, data platforms, suites internes) qui packagent les agents et les exposent aux clients via bundles, catalogues ou déploiements managés." },
+      5: { name: "L5 — Enterprise Adoption & Regulated Deployment", meta: "Déploiements massifs en environnements entreprise ou régulés avec gouvernance, conformité, sécurité, auditabilité, contrôle des risques et industrialisation." },
+      6: { name: "L6 — Market Analysis", meta: "Analyses de marché et signaux (adoption, productivité, risques, pricing, concentration) pour anticiper les gagnants, les shifts de valeur et les dynamiques de commoditisation." },
+    },
+  },
+  en: {
+    layersLegend: "Layers legend",
+    expand: "Expand",
+    minimize: "Minimize",
+    visibility: "Visibility",
+    axesHelper: "X, Y, Z axes",
+    gridXZ: "XZ grid",
+    stockMarket: "Stock Market",
+    date: "Date",
+    link: "Link",
+    metric: "Metric",
+    layers: {
+      0: { name: "L0 — Protocol & Standards", meta: "Interoperability standards (protocols, formats, conventions, schemas) that reduce integration costs and enable the models ↔ agents ↔ tools ↔ data ecosystem." },
+      1: { name: "L1 — Foundation Models", meta: "Foundation models (LLMs, multimodal) providing raw cognitive capabilities: understanding, generation, reasoning, vision, audio. No direct action: inference only." },
+      2: { name: "L2 — Agent Systems", meta: "Operable interface (cowork, plugins, IDE agents) where the agent becomes a work UI and replaces SaaS screens with automated actions." },
+      3: { name: "L3 — Workflow / Product Surface", meta: "Operable interfaces (IDE agents, copilots, cowork, plugins) where the agent becomes the main UI and replaces SaaS screens with automated actions and workflows." },
+      4: { name: "L4 — Distribution & Platforms", meta: "Distribution channels (hyperscalers, marketplaces, data platforms, internal suites) that package agents and expose them to clients via bundles, catalogs, or managed deployments." },
+      5: { name: "L5 — Enterprise Adoption & Regulated Deployment", meta: "Large-scale deployments in enterprise or regulated environments with governance, compliance, security, auditability, risk control, and industrialization." },
+      6: { name: "L6 — Market Analysis", meta: "Market analysis and signals (adoption, productivity, risks, pricing, concentration) to anticipate winners, value shifts, and commoditization dynamics." },
+    },
+  },
+};
 
-
-function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket }) {
+function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket }) {
   const [minimized, setMinimized] = useState(false);
 
   return (
@@ -113,7 +156,7 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
         }}
       >
         <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>
-          Visibilité
+          {T[lang]?.visibility ?? "Visibilité"}
         </div>
         <button
           onClick={() => setMinimized((v) => !v)}
@@ -129,7 +172,7 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
             cursor: "pointer",
             lineHeight: 1,
           }}
-          title={minimized ? "Expand" : "Minimize"}
+          title={minimized ? (T[lang]?.expand ?? "Expand") : (T[lang]?.minimize ?? "Minimize")}
         >
           {minimized ? "▾" : "▴"}
         </button>
@@ -153,7 +196,7 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
               onChange={(e) => setShowAxesHelper(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            Repère X, Y, Z
+            {T[lang]?.axesHelper ?? "Repère X, Y, Z"}
           </label>
           <label
             style={{
@@ -171,7 +214,7 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
               onChange={(e) => setShowGrid(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            Grille XZ
+            {T[lang]?.gridXZ ?? "Grille XZ"}
           </label>
           <label
             style={{
@@ -189,7 +232,7 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
               onChange={(e) => setShowStockMarket(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            Stock Market
+            {T[lang]?.stockMarket ?? "Stock Market"}
           </label>
         </div>
       )}
@@ -199,8 +242,8 @@ function VisibilityHUD({ showAxesHelper, setShowAxesHelper, showGrid, setShowGri
 
 const DEFAULT_LAYER_VISIBILITY = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true };
 
-function LegendHUD({ layerVisibility, setLayerVisibility }) {
-  const [minimized, setMinimized] = useState(false);
+function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
+  const [minimized, setMinimized] = useState(true);
 
   // Inverse order: L6 top ... L0 bottom
   const layerKeys = useMemo(
@@ -243,7 +286,7 @@ function LegendHUD({ layerVisibility, setLayerVisibility }) {
             letterSpacing: 0.2,
           }}
         >
-          Layers legend
+          {T[lang]?.layersLegend ?? "Layers legend"}
         </div>
 
         <button
@@ -260,7 +303,7 @@ function LegendHUD({ layerVisibility, setLayerVisibility }) {
             cursor: "pointer",
             lineHeight: 1,
           }}
-          title={minimized ? "Expand" : "Minimize"}
+          title={minimized ? (T[lang]?.expand ?? "Expand") : (T[lang]?.minimize ?? "Minimize")}
         >
           {minimized ? "▾" : "▴"}
         </button>
@@ -278,6 +321,7 @@ function LegendHUD({ layerVisibility, setLayerVisibility }) {
       >
         {layerKeys.map((k) => {
           const l = LAYERS[k];
+          const tl = T[lang]?.layers?.[k];
           const visible = layerVisibility?.[k] ?? true;
           return (
             <div key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -312,10 +356,10 @@ function LegendHUD({ layerVisibility, setLayerVisibility }) {
                       marginBottom: minimized ? 0 : 3,
                     }}
                   >
-                    {l.name}
+                    {tl?.name ?? l?.name ?? `L${k}`}
                   </div>
                   {!minimized && (
-                    <div style={{ fontSize: 16.5, opacity: 0.9, lineHeight: 1.25 }}>{l.meta}</div>
+                    <div style={{ fontSize: 16.5, opacity: 0.9, lineHeight: 1.25 }}>{tl?.meta ?? l?.meta ?? ""}</div>
                   )}
                 </div>
               </label>
@@ -341,12 +385,18 @@ const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_
 const FIT_TARGET = [0, 1, 0];
 const FIT_CAMERA_OFFSET = new THREE.Vector3(12, 10, 12);
 
-function NodeBox({ node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick }) {
+function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
   const hover = hoveredNodeKey === nodeKey;
 
-  const layerInfo = LAYERS[node.layer] ?? { name: "Layer ?", color: "#9ca3af", meta: "" };
+  const layerBase = LAYERS[node.layer] ?? { color: "#9ca3af" };
+  const layerTr = T[lang]?.layers?.[node.layer];
+  const layerInfo = {
+    color: layerBase.color,
+    name: layerTr?.name ?? layerBase?.name ?? "Layer ?",
+    meta: layerTr?.meta ?? layerBase?.meta ?? "",
+  };
 
   return (
     <group position={node.pos}>
@@ -430,10 +480,10 @@ function NodeBox({ node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleCli
             {node.source && (
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 8 }}>
                 <div style={{ marginBottom: 4 }}>
-                  <span style={{ opacity: 0.8 }}>Date:</span> {node.source.date}
+                  <span style={{ opacity: 0.8 }}>{T[lang]?.date ?? "Date"}:</span> {node.source.date}
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <span style={{ opacity: 0.8 }}>Link:</span>{" "}
+                  <span style={{ opacity: 0.8 }}>{T[lang]?.link ?? "Link"}:</span>{" "}
                   <a
                     href={node.source.link}
                     target="_blank"
@@ -453,7 +503,7 @@ function NodeBox({ node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleCli
                   </a>
                 </div>
                 <div>
-                  <span style={{ opacity: 0.8 }}>Metric:</span> {node.source.metric}
+                  <span style={{ opacity: 0.8 }}>{T[lang]?.metric ?? "Metric"}:</span> {node.source.metric}
                 </div>
               </div>
             )}
@@ -483,39 +533,11 @@ function ShockwaveRing({ radius = 6, y = RING_Y }) {
 }
 
 function ImpactRing({ radius = 6, y = RING_Y }) {
-  const sectors = useMemo(
-    () => [
-      { label: "Legal / Info", angle: 0.3 },
-      { label: "Ads / Agency", angle: 1.6 },
-      { label: "BPO / CX", angle: 3.0 },
-      { label: "IT Services", angle: 4.5 },
-    ],
-    []
-  );
-
   return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]}>
-        <torusGeometry args={[radius, 0.06, 12, 96]} />
-        <meshStandardMaterial metalness={0.1} roughness={0.7} color={"#9ca3af"} />
-      </mesh>
-
-      {sectors.map((s) => (
-        <Text
-          key={s.label}
-          position={[
-            Math.cos(s.angle) * (radius + 0.9),
-            y + 0.25,
-            Math.sin(s.angle) * (radius + 0.9),
-          ]}
-          fontSize={0.22}
-          anchorX="center"
-          anchorY="middle"
-        >
-          {s.label}
-        </Text>
-      ))}
-    </group>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]}>
+      <torusGeometry args={[radius, 0.06, 12, 96]} />
+      <meshStandardMaterial metalness={0.1} roughness={0.7} color={"#9ca3af"} />
+    </mesh>
   );
 }
 
@@ -693,6 +715,7 @@ function SmoothFitFrame({ onComplete, controlsRef }) {
 }
 
 function Scene({
+  lang = "fr",
   showAxesHelper = true,
   showGrid = false,
   showStockMarket = false,
@@ -732,6 +755,7 @@ function Scene({
         .map(({ n, i }) => (
           <NodeBox
             key={`${n.id}-${i}`}
+            lang={lang}
             node={n}
             nodeKey={`${n.id}-${i}`}
             hoveredNodeKey={hoveredNodeKey}
@@ -759,6 +783,7 @@ function Scene({
 }
 
 export default function App() {
+  const [lang, setLang] = useState("fr");
   const [showAxesHelper, setShowAxesHelper] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showStockMarket, setShowStockMarket] = useState(true);
@@ -780,11 +805,60 @@ export default function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 14,
+          right: 14,
+          zIndex: 10,
+          display: "flex",
+          gap: 4,
+          background: "rgba(0,0,0,0.72)",
+          borderRadius: 10,
+          padding: "4px 6px",
+          border: "1px solid rgba(255,255,255,0.12)",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <button
+          onClick={() => setLang("fr")}
+          style={{
+            appearance: "none",
+            border: "none",
+            background: lang === "fr" ? "rgba(255,255,255,0.2)" : "transparent",
+            color: "white",
+            borderRadius: 8,
+            padding: "6px 10px",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Français
+        </button>
+        <button
+          onClick={() => setLang("en")}
+          style={{
+            appearance: "none",
+            border: "none",
+            background: lang === "en" ? "rgba(255,255,255,0.2)" : "transparent",
+            color: "white",
+            borderRadius: 8,
+            padding: "6px 10px",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          English
+        </button>
+      </div>
       <Canvas
         camera={{ position: [9, 6, 10], fov: 45 }}
         onPointerMissed={handlePointerMissed}
       >
         <Scene
+          lang={lang}
           showAxesHelper={showAxesHelper}
           showGrid={showGrid}
           showStockMarket={showStockMarket}
@@ -797,6 +871,7 @@ export default function App() {
       </Canvas>
 
       <VisibilityHUD
+        lang={lang}
         showAxesHelper={showAxesHelper}
         setShowAxesHelper={setShowAxesHelper}
         showGrid={showGrid}
@@ -804,7 +879,7 @@ export default function App() {
         showStockMarket={showStockMarket}
         setShowStockMarket={setShowStockMarket}
       />
-      <LegendHUD layerVisibility={layerVisibility} setLayerVisibility={setLayerVisibility} />
+      <LegendHUD lang={lang} layerVisibility={layerVisibility} setLayerVisibility={setLayerVisibility} />
     </div>
   );
 }
