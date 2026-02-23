@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
@@ -33,6 +33,41 @@ function dateToTimelineZ(dateStrOrDate) {
 function priceToY(price, priceMin, priceMax) {
   const t = (price - priceMin) / (priceMax - priceMin);
   return RING_Y + THREE.MathUtils.clamp(t, 0, 1) * STOCK_Y_RANGE;
+}
+
+/**
+ * Calcule la portion du cercle occupée par un texte inscrit sur un arc.
+ * @param {string} text - Le texte à inscrire
+ * @param {number} radius - Rayon du cercle
+ * @param {number} fontSize - Taille de police
+ * @param {number} startAngle - Angle de départ en radians (0 = droite, sens trigo)
+ * @param {number} charWidthRatio - Ratio largeur caractère / fontSize (défaut ~0.48)
+ * @param {boolean} reverse - Si true, inverse le sens d'écriture le long de l'arc
+ * @returns {{ startAngle, endAngle, arcAngle, startPortion, endPortion, charAngles }}
+ */
+export function getTextArcPortion(text, radius, fontSize, startAngle = 0, charWidthRatio = 0.48, reverse = false) {
+  const charWidth = fontSize * charWidthRatio;
+  const totalArcLength = text.length * charWidth;
+  const arcAngle = totalArcLength / radius;
+  const endAngle = startAngle + arcAngle;
+  const twoPi = 2 * Math.PI;
+  const charAngles = [...text].map((_, i) =>
+    reverse ? endAngle - (i + 0.5) * charWidth / radius : startAngle + (i + 0.5) * charWidth / radius
+  );
+  // #region agent log
+  if (text.length > 0) {
+    const sample = { first: { char: text[0], angle: charAngles[0], i: 0 }, last: { char: text[text.length - 1], angle: charAngles[charAngles.length - 1], i: text.length - 1 }, startAngle, endAngle };
+    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'getTextArcPortion',message:'char order sample',data:sample,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+  }
+  // #endregion
+  return {
+    startAngle,
+    endAngle,
+    arcAngle,
+    startPortion: ((startAngle % twoPi) + twoPi) % twoPi / twoPi,
+    endPortion: ((endAngle % twoPi) + twoPi) % twoPi / twoPi,
+    charAngles,
+  };
 }
 
 const LAYERS = {
@@ -532,12 +567,68 @@ function ShockwaveRing({ radius = 6, y = RING_Y }) {
   );
 }
 
-function ImpactRing({ radius = 6, y = RING_Y }) {
+const IMPACT_RING_QUOTE =
+  "What is the significance of mankind in the Universe ? the fundamental structure of the Universe is determined by the existence of intelligent observers: the universe is as it is because if it were otherwise, observers could not exist. In its most radical version, the Anthropic Principle asserts: Intelligent information-processing must come into existence in the Universe, and once it comes into existence, it will never die out.";
+
+function CurvedText({ text, radius, y, fontSize = 0.28, startAngle = 0, charWidthRatio = 0.48, color, reverse = false }) {
+  const { charAngles } = useMemo(
+    () => getTextArcPortion(text, radius, fontSize, startAngle, charWidthRatio, reverse),
+    [text, radius, fontSize, startAngle, charWidthRatio, reverse]
+  );
+
+  // #region agent log
+  useEffect(() => {
+    const d = { firstChar: text[0], lastChar: text[text.length - 1], firstAngle: charAngles[0], lastAngle: charAngles[charAngles.length - 1], firstX: Math.cos(charAngles[0]) * radius, firstZ: Math.sin(charAngles[0]) * radius };
+    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'CurvedText',message:'first/last pos',data:d,timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+  }, [text, charAngles, radius]);
+  // #endregion
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]}>
-      <torusGeometry args={[radius, 0.06, 12, 96]} />
-      <meshStandardMaterial metalness={0.1} roughness={0.7} color={"#9ca3af"} />
-    </mesh>
+    <group>
+      {[...text].map((char, i) => (
+        <group
+          key={i}
+          position={[
+            Math.cos(charAngles[i]) * radius,
+            y,
+            Math.sin(charAngles[i]) * radius,
+          ]}
+          rotation={[0, Math.PI - charAngles[i], 0]}
+        >
+          <Text fontSize={fontSize} anchorX="center" anchorY="middle" color={color}>
+            {char}
+          </Text>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+const IMPACT_RING_ROTATION_SPEED = 0.15;
+
+function ImpactRing({ radius = 6, y = RING_Y }) {
+  const ref = useRef();
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.y -= IMPACT_RING_ROTATION_SPEED * dt;
+  });
+
+  const quoteStartAngle = Math.PI * 0.15;
+
+  return (
+    <group ref={ref} position={[0, y, 0]}>
+{/*      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <torusGeometry args={[radius, 0.06, 12, 96]} />
+        <meshStandardMaterial metalness={0.1} roughness={0.7} color={"#9ca3af"} />
+      </mesh>*/}
+      <CurvedText
+        text={IMPACT_RING_QUOTE}
+        radius={radius + 0.5}
+        y={0.2}
+        fontSize={0.2}
+        startAngle={quoteStartAngle}
+        color="#f8fafc"
+        reverse
+      />
+    </group>
   );
 }
 

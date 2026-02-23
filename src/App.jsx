@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
+import { getTextArcPortion } from "./AppLayerTimeLine";
 
 const NODES = [
   // Y0 — Protocol / Standards
@@ -176,6 +177,35 @@ function ShockwaveRing({ radius = 6, y = 1.3 }) {
   );
 }
 
+function CurvedText({ text, radius, y, fontSize = 0.18, startAngle = 0, charWidthRatio = 0.48 }) {
+  const { charAngles } = useMemo(
+    () => getTextArcPortion(text, radius, fontSize, startAngle, charWidthRatio),
+    [text, radius, fontSize, startAngle, charWidthRatio]
+  );
+
+  return (
+    <group>
+      {[...text].map((char, i) => (
+        <group
+          key={i}
+          position={[
+            Math.cos(charAngles[i]) * radius,
+            y,
+            Math.sin(charAngles[i]) * radius,
+          ]}
+          rotation={[0, -charAngles[i], 0]}
+        >
+          <Text fontSize={fontSize} anchorX="center" anchorY="middle">
+            {char}
+          </Text>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+const IMPACT_RING_QUOTE = "the fundamental structure of the Universe is determined by the existence of intelligent observers";
+
 function ImpactRing({ radius = 6, y = 1.3 }) {
   const sectors = useMemo(() => ([
     { label: "Legal / Info", angle: 0.3 },
@@ -184,12 +214,22 @@ function ImpactRing({ radius = 6, y = 1.3 }) {
     { label: "IT Services", angle: 4.5 },
   ]), []);
 
+  const quoteStartAngle = Math.PI * 0.15;
+
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]}>
         <torusGeometry args={[radius, 0.06, 12, 96]} />
         <meshStandardMaterial metalness={0.1} roughness={0.7} />
       </mesh>
+
+      <CurvedText
+        text={IMPACT_RING_QUOTE}
+        radius={radius + 0.5}
+        y={y + 0.2}
+        fontSize={0.14}
+        startAngle={quoteStartAngle}
+      />
 
       {sectors.map((s) => (
         <Text
