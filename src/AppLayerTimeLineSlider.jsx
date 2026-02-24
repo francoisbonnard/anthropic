@@ -162,7 +162,7 @@ const T = {
   },
 };
 
-function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket }) {
+function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket, stockPlanePosition = 0, setStockPlanePosition }) {
   const [minimized, setMinimized] = useState(false);
 
   return (
@@ -171,7 +171,7 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
         position: "absolute",
         left: 14,
         bottom: 14,
-        width: minimized ? 180 : 220,
+        width: minimized ? 180 : (showStockMarket ? 280 : 220),
         background: "rgba(0,0,0,0.72)",
         color: "white",
         borderRadius: 14,
@@ -270,6 +270,18 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
             {T[lang]?.stockMarket ?? "Stock Market"}
+            {showStockMarket && setStockPlanePosition && (
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={stockPlanePosition}
+                onChange={(e) => setStockPlanePosition(parseFloat(e.target.value))}
+                style={{ flex: 1, minWidth: 60, height: 6, accentColor: "#3b82f6", cursor: "pointer" }}
+                title="Position du plan Stock Market"
+              />
+            )}
           </label>
         </div>
       )}
@@ -786,22 +798,23 @@ function SkyBackground() {
   return null;
 }
 
-function StockMarketPlane({ timeDilation = 1 }) {
+function StockMarketPlane({ timeDilation = 1, stockPlanePosition = 0 }) {
   const { min: priceMin, max: priceMax } = useMemo(() => getStockPriceBounds(), []);
   const { zMin, zMax } = getEffectiveTimelineBounds(timeDilation);
   const planeWidth = zMax - zMin;
+  const planeX = THREE.MathUtils.lerp(STOCK_PLANE_X, 0, stockPlanePosition);
 
   const stockCurves = useMemo(() => {
     return Object.entries(STOCKS).map(([name, { color, data }]) => ({
       name,
       color,
       points: data.map(({ date, value }) => [
-        STOCK_PLANE_X,
+        planeX,
         priceToY(value, priceMin, priceMax),
         dateToTimelineZ(date, timeDilation),
       ]),
     }));
-  }, [priceMin, priceMax, timeDilation]);
+  }, [priceMin, priceMax, timeDilation, planeX]);
   const planeHeight = STOCK_Y_RANGE;
   const planeCenterZ = (zMin + zMax) / 2;
 
@@ -809,7 +822,7 @@ function StockMarketPlane({ timeDilation = 1 }) {
     <group position={[0, 0, 0]}>
       {/* Plan semi-transparent YZ (rotation pour plan YZ : normal = X) */}
       <mesh
-        position={[STOCK_PLANE_X, RING_Y + planeHeight / 2, planeCenterZ]}
+        position={[planeX, RING_Y + planeHeight / 2, planeCenterZ]}
         rotation={[0, -Math.PI / 2, 0]}
       >
         <planeGeometry args={[planeWidth, planeHeight]} />
@@ -821,11 +834,11 @@ function StockMarketPlane({ timeDilation = 1 }) {
       ))}
       {/* Labels (noms des stocks) — au début de chaque courbe, dans le plan YZ (normale X) */}
       {stockCurves.map(({ name, color, points }) => {
-        const [x, y, z] = points[0];
+        const [, y, z] = points[0];
         return (
           <Text
             key={name}
-            position={[x+0.1, y, z+0.2]}
+            position={[planeX + 0.1, y, z + 0.2]}
             rotation={[0, +Math.PI / 2, 0]}
             fontSize={0.18}
             anchorX="right"
@@ -838,7 +851,7 @@ function StockMarketPlane({ timeDilation = 1 }) {
       })}
       {/* Échelle prix (référence Oct 2022) */}
       <Text
-        position={[STOCK_PLANE_X, RING_Y + planeHeight + 0.3, zMax]}
+        position={[planeX, RING_Y + planeHeight + 0.3, zMax]}
         fontSize={0.14}
         anchorX="center"
         anchorY="middle"
@@ -846,7 +859,7 @@ function StockMarketPlane({ timeDilation = 1 }) {
         ${priceMax.toFixed(0)}
       </Text>
       <Text
-        position={[STOCK_PLANE_X, RING_Y - 0.2, zMax]}
+        position={[planeX, RING_Y - 0.2, zMax]}
         fontSize={0.14}
         anchorX="center"
         anchorY="middle"
@@ -925,6 +938,7 @@ function Scene({
   showAxesHelper = true,
   showGrid = false,
   showStockMarket = false,
+  stockPlanePosition = 0,
   layerVisibility = DEFAULT_LAYER_VISIBILITY,
   timeDilation = 1,
   fitFrame = false,
@@ -952,7 +966,7 @@ function Scene({
 
       {showAxesHelper && <AxesHelper />}
       {showGrid && <GridXZ />}
-      {showStockMarket && <StockMarketPlane timeDilation={timeDilation} />}
+      {showStockMarket && <StockMarketPlane timeDilation={timeDilation} stockPlanePosition={stockPlanePosition} />}
       <Timeline timeDilation={timeDilation} />
       <ImpactRing radius={RING_RADIUS} y={RING_Y} />
       <ShockwaveRing radius={RING_RADIUS} y={RING_Y} />
@@ -996,6 +1010,7 @@ export default function App() {
   const [showAxesHelper, setShowAxesHelper] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showStockMarket, setShowStockMarket] = useState(true);
+  const [stockPlanePosition, setStockPlanePosition] = useState(0);
   const [layerVisibility, setLayerVisibility] = useState(DEFAULT_LAYER_VISIBILITY);
   const [timeDilation, setTimeDilation] = useState(1);
   const [fitFrame, setFitFrame] = useState(false);
@@ -1073,6 +1088,7 @@ export default function App() {
           showAxesHelper={showAxesHelper}
           showGrid={showGrid}
           showStockMarket={showStockMarket}
+          stockPlanePosition={stockPlanePosition}
           layerVisibility={layerVisibility}
           timeDilation={timeDilation}
           fitFrame={fitFrame}
@@ -1091,6 +1107,8 @@ export default function App() {
         setShowGrid={setShowGrid}
         showStockMarket={showStockMarket}
         setShowStockMarket={setShowStockMarket}
+        stockPlanePosition={stockPlanePosition}
+        setStockPlanePosition={setStockPlanePosition}
       />
       <TimeDilationSlider lang={lang} timeDilation={timeDilation} setTimeDilation={setTimeDilation} />
       <LegendHUD lang={lang} layerVisibility={layerVisibility} setLayerVisibility={setLayerVisibility} />
