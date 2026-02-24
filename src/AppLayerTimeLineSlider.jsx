@@ -73,43 +73,43 @@ export function getTextArcPortion(text, radius, fontSize, startAngle = 0, charWi
 const LAYERS = {
   0: {
     name: "L0 — Protocol & Standards",
-    color: "#22c55e",
+    color: "#CA3C66",
     meta:
       "Standards d’interopérabilité (protocoles, formats, conventions, schémas) qui réduisent le coût d’intégration et rendent possible l’écosystème models ↔ agents ↔ tools ↔ data.",
   },
   1: {
     name: "L1 — Foundation Models",
-    color: "#38bdf8",
+    color: "#DB6A8F",
     meta:
       "Modèles fondamentaux (LLMs, multimodaux) fournissant les capacités cognitives brutes : compréhension, génération, raisonnement, vision, audio. Aucune action directe : uniquement de l'inférence.",
   },
   2: {
     name: "L2 — Agent Systems",
-    color: "#6366f1",
+    color: "#E8AABE",
     meta:
       "Interface opérable (cowork, plugins, IDE agents) où l’agent devient une UI de travail et remplace des écrans SaaS par des actions automatisées.",
   },
   3: {
     name: "L3 — Workflow / Product Surface",
-    color: "#a78bfa",
+    color: "#9AC8EB",
     meta:
       "Interfaces opérables (IDE agents, copilots, cowork, plugins) où l'agent devient l'UI principale et remplace des écrans SaaS par des actions et workflows automatisés. l’agent et le mettent au contact des clients via bundles, marketplaces ou déploiements internes.",
   },
   4: {
     name: "L4 — Distribution & Platforms",
-    color: "#f59e0b",
+    color: "#4AA3A2",
     meta:
       "Canaux de diffusion (hyperscalers, marketplaces, data platforms, suites internes) qui packagent les agents et les exposent aux clients via bundles, catalogues ou déploiements managés.",
   },
   5: {
     name: "L5 — Enterprise Adoption & Regulated Deployment",
-    color: "#ef4444",
+    color: "#B8CBD0",
     meta:
       "Déploiements massifs en environnements entreprise ou régulés avec gouvernance, conformité, sécurité, auditabilité, contrôle des risques et industrialisation.",
   },
   6: {
     name: "L6 — Market Analysis",
-    color: "#06b6d4",
+    color: "#7A90A4",
     meta:
       "Analyses de marché et signaux (adoption, productivité, risques, pricing, concentration) pour anticiper les gagnants, les shifts de valeur et les dynamiques de commoditisation.",
   },
