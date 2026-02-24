@@ -486,6 +486,41 @@ function lightenColor(hex, percent = 10) {
   return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
+function shiftHueColor(hex, percent) {
+  const num = parseInt(hex.slice(1), 16);
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  h = (h + percent / 100) % 1;
+  if (h < 0) h += 1;
+  const hue2rgb = (p, q, t) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const nr = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+  const ng = Math.round(hue2rgb(p, q, h) * 255);
+  const nb = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+  return "#" + [nr, ng, nb].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
 const LERP_FACTOR = 0.08;
 const FLY_TO_DISTANCE = 6;
 const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_TO_DISTANCE);
@@ -517,12 +552,15 @@ function CameraFollowDilation({ timeDilation, controlsRef }) {
 function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick, onSpawnNodes }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
+  const [isButtonHovered, setIsButtonHovered] = useState(false);
   const hover = hoveredNodeKey === nodeKey;
 
   const layerBase = LAYERS[node.layer] ?? { color: "#9ca3af" };
   const layerTr = T[lang]?.layers?.[node.layer];
+  const baseColor = layerBase.color;
+  const nodeColor = node.spawnIndex != null ? shiftHueColor(baseColor, node.spawnIndex * 5) : baseColor;
   const layerInfo = {
-    color: layerBase.color,
+    color: nodeColor,
     name: layerTr?.name ?? layerBase?.name ?? "Layer ?",
     meta: layerTr?.meta ?? layerBase?.meta ?? "",
   };
@@ -538,13 +576,15 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
       {hasButton && (
         <mesh
           position={[0, 0, buttonZ]}
+          scale={isButtonHovered ? 1.15 : 1}
           onClick={(e) => {
             e.stopPropagation();
-            onSpawnNodes?.(nodeKey, node.pos, numNew, node.layer, node.size, node.NewNodes);
+            onSpawnNodes?.(nodeKey, node.pos, numNew, node.layer, node.size, node.NewNodes, node.source?.date);
           }}
           onPointerEnter={(e) => {
             e.stopPropagation();
             document.body.style.cursor = "pointer";
+            setIsButtonHovered(true);
             if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
             leaveTimeout.current = null;
             isPointerOverTooltip.current = false;
@@ -552,6 +592,7 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
           }}
           onPointerLeave={(e) => {
             document.body.style.cursor = "auto";
+            setIsButtonHovered(false);
             if (!isPointerOverTooltip.current) {
               leaveTimeout.current = setTimeout(() => {
                 setHoveredNodeKey((prev) => (prev === nodeKey ? null : prev));
@@ -560,7 +601,13 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
           }}
         >
           <boxGeometry args={[buttonSize, buttonSize, 0.05]} />
-          <meshStandardMaterial color={buttonColor} metalness={0.2} roughness={0.65} />
+          <meshStandardMaterial
+            color={isButtonHovered ? lightenColor(buttonColor, 15) : buttonColor}
+            metalness={isButtonHovered ? 0.35 : 0.2}
+            roughness={isButtonHovered ? 0.5 : 0.65}
+            emissive={isButtonHovered ? buttonColor : "#000000"}
+            emissiveIntensity={isButtonHovered ? 0.15 : 0}
+          />
         </mesh>
       )}
       <mesh
@@ -1002,7 +1049,7 @@ function Scene({
   const [spawnedNodes, setSpawnedNodes] = useState([]);
   const controlsRef = useRef(null);
 
-  const handleSpawnNodes = useCallback((parentKey, parentPos, count, layer, parentSize, newNodesData) => {
+  const handleSpawnNodes = useCallback((parentKey, parentPos, count, layer, parentSize, newNodesData, parentSourceDate) => {
     setSpawnedNodes((prev) => {
       const existing = prev.filter((sn) => sn.parentKey === parentKey);
       if (existing.length > 0) {
@@ -1022,6 +1069,8 @@ function Scene({
           key: `${parentKey}-spawn-${Date.now()}-${i}`,
           parentKey,
           pos: [x, py, pz],
+          parentSourceDate: parentSourceDate || null,
+          spawnIndex: i,
           layer,
           size: [...parentSize],
           label,
@@ -1073,17 +1122,21 @@ function Scene({
 
       {spawnedNodes
         .filter((sn) => layerVisibility[sn.layer] !== false)
-        .map((sn) => (
-          <NodeBox
-            key={sn.key}
-            lang={lang}
-            node={{ id: sn.label, layer: sn.layer, pos: sn.pos, size: sn.size, label: sn.label, spawnValue: sn.value }}
-            nodeKey={sn.key}
-            hoveredNodeKey={hoveredNodeKey}
-            setHoveredNodeKey={setHoveredNodeKey}
-            onDoubleClick={(pos) => setFlyToTarget(pos)}
-          />
-        ))}
+        .map((sn) => {
+          const z = sn.parentSourceDate ? dateToTimelineZ(sn.parentSourceDate, timeDilation) : sn.pos[2];
+          const pos = [sn.pos[0], sn.pos[1], z];
+          return (
+            <NodeBox
+              key={sn.key}
+              lang={lang}
+              node={{ id: sn.label, layer: sn.layer, pos, size: sn.size, label: sn.label, spawnValue: sn.value, spawnIndex: sn.spawnIndex }}
+              nodeKey={sn.key}
+              hoveredNodeKey={hoveredNodeKey}
+              setHoveredNodeKey={setHoveredNodeKey}
+              onDoubleClick={(pos) => setFlyToTarget(pos)}
+            />
+          );
+        })}
 
       <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.05} />
       <CameraFollowDilation timeDilation={timeDilation} controlsRef={controlsRef} />
