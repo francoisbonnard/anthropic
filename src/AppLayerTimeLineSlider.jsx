@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
@@ -60,12 +60,6 @@ export function getTextArcPortion(text, radius, fontSize, startAngle = 0, charWi
   const charAngles = [...text].map((_, i) =>
     reverse ? endAngle - (i + 0.5) * charWidth / radius : startAngle + (i + 0.5) * charWidth / radius
   );
-  // #region agent log
-  if (text.length > 0) {
-    const sample = { first: { char: text[0], angle: charAngles[0], i: 0 }, last: { char: text[text.length - 1], angle: charAngles[charAngles.length - 1], i: text.length - 1 }, startAngle, endAngle };
-    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'getTextArcPortion',message:'char order sample',data:sample,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  }
-  // #endregion
   return {
     startAngle,
     endAngle,
@@ -633,12 +627,6 @@ function CurvedText({ text, radius, y, fontSize = 0.28, startAngle = 0, charWidt
     [text, radius, fontSize, startAngle, charWidthRatio, reverse]
   );
 
-  // #region agent log
-  useEffect(() => {
-    const d = { firstChar: text[0], lastChar: text[text.length - 1], firstAngle: charAngles[0], lastAngle: charAngles[charAngles.length - 1], firstX: Math.cos(charAngles[0]) * radius, firstZ: Math.sin(charAngles[0]) * radius };
-    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'CurvedText',message:'first/last pos',data:d,timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-  }, [text, charAngles, radius]);
-  // #endregion
   return (
     <group>
       {[...text].map((char, i) => (
@@ -729,6 +717,54 @@ function Timeline({ timeDilation = 1 }) {
 const AXES_LENGTH = 4;
 const GRID_SIZE = 20;
 const GRID_DIVISIONS = 20;
+
+const SKY_TEXTURE_PATH = new URL("/textures/sky_an_horizon_with_clouds.jpg", import.meta.url).href;
+
+function SkyBackground() {
+  const { scene } = useThree();
+
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.load(SKY_TEXTURE_PATH, (tex) => {
+      const img = tex.image;
+      const w = img.width;
+      const h = img.height;
+      const aspect = w / h;
+
+      // Générer une texture équirectangulaire 2:1 (format VR) à partir de la résolution de l'image
+      const outW = Math.min(Math.max(w, 512), 4096);
+      const outH = outW / 2; // 2:1 pour VR
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0a0a12";
+      ctx.fillRect(0, 0, outW, outH);
+
+      if (aspect >= 2) {
+        // Image plus large que 2:1 (bande horizontale) → remplir la largeur, centrer verticalement
+        const drawW = outW;
+        const drawH = outW / aspect;
+        const sy = (outH - drawH) / 2;
+        ctx.drawImage(img, 0, 0, w, h, 0, sy, drawW, drawH);
+      } else {
+        // Image plus haute que 2:1 → remplir la hauteur, centrer horizontalement
+        const drawH = outH;
+        const drawW = outH * aspect;
+        const sx = (outW - drawW) / 2;
+        ctx.drawImage(img, 0, 0, w, h, sx, 0, drawW, drawH);
+      }
+
+      const vrTexture = new THREE.CanvasTexture(canvas);
+      vrTexture.mapping = THREE.EquirectangularReflectionMapping;
+      vrTexture.colorSpace = THREE.SRGBColorSpace;
+      scene.background = vrTexture;
+    });
+  }, [scene]);
+
+  return null;
+}
 
 function StockMarketPlane({ timeDilation = 1 }) {
   const { min: priceMin, max: priceMax } = useMemo(() => getStockPriceBounds(), []);
@@ -890,6 +926,7 @@ function Scene({
 
   return (
     <>
+      <SkyBackground />
       <ambientLight intensity={0.55} />
       <directionalLight position={[6, 10, 6]} intensity={1.1} />
 
@@ -1009,7 +1046,8 @@ export default function App() {
         camera={{ position: [9, 6, 10], fov: 45 }}
         onPointerMissed={handlePointerMissed}
       >
-        <Scene
+        <Suspense fallback={null}>
+          <Scene
           lang={lang}
           showAxesHelper={showAxesHelper}
           showGrid={showGrid}
@@ -1021,6 +1059,7 @@ export default function App() {
           flyToTarget={flyToTarget}
           setFlyToTarget={setFlyToTarget}
         />
+        </Suspense>
       </Canvas>
 
       <VisibilityHUD
