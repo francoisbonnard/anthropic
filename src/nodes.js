@@ -1,6 +1,8 @@
 /**
  * Nœuds de la timeline (événements, produits, partenariats).
- * Chaque nœud a : id, layer, label, pos [x,y,z], size [w,h,d], optionnellement source.
+ * Chaque nœud a : id, layer, label, pos [x,y,z], size [w,h,d], optionnellement source, numberNewNode, NewNodes.
+ * numberNewNode : si > 0, affiche un bouton ; au clic, génère ce nombre de nouveaux nodes sur l'axe X.
+ * NewNodes : objet { clé: valeur } ; chaque nouveau node affiche la clé et au survol montre la valeur.
  */
 
 const level0 = -1.2;
@@ -31,6 +33,7 @@ export const NODES = [
     label: "MCP",
     pos: [0, level0, 0],
     size: [2.4, 0.35, 1.2],
+    numberNewNode: 3,
     source: {
       date: "2024-11-25",
       link: "https://www.anthropic.com/news/model-context-protocol",
@@ -101,16 +104,32 @@ export const NODES = [
   },
 
   // L3
-  { id: "ccode", layer: 3, label: "Claude Code", pos: [-2.8, level3, -0.8], size: [1.4, 0.4, 0.9],  
-      source: {
-    date: "2025-10-20",
-    link: "https://mlq.ai/news/anthropic-launches-claude-code-on-the-web/",
-    metric: "Anthropic Launches Claude Code on the Web",
-  }, },
+  { id: "ccode", layer: 3, label: "Claude Code", pos: [-2.8, level3, -0.8], size: [1.4, 0.4, 0.9],
+    numberNewNode: 0,
+    source: {
+      date: "2025-10-20",
+      link: "https://mlq.ai/news/anthropic-launches-claude-code-on-the-web/",
+      metric: "Anthropic Launches Claude Code on the Web",
+    },
+  },
 // L2
   {
     id: "cowork",
     layer: 2,
+    numberNewNode: 12,
+    NewNodes: {
+      "Productivity": "Manage tasks, calendars, daily workflows, and personal context. Integrates with Slack, Notion, Asana, Linear, Jira, Monday, ClickUp, Microsoft 365.",
+      "Sales": "Research prospects, prep deals, and follow your sales process. Connects Claude to your CRM and knowledge base.",
+      "Legal": "Contract review with clause-by-clause flagging (GREEN/YELLOW/RED). Rapid NDA pre-screening.",
+      "Finance": "Analyze financials, build models, and track key metrics.",
+      "Marketing": "Draft content, plan campaigns, manage launches.",
+      "Support": "Customer service workflows and response drafting.",
+      "Data Analysis": "Query data, build dashboards, generate insights.",
+      "Research": "Deep research synthesis and competitive analysis.",
+      "Enterprise Search": "Find information across company tools and docs.",
+      "Product": "Feature specs, user research synthesis, roadmap planning.",
+      "Plugin Create": "Create and customize new plugins from scratch.",  
+    },   
     label: "Cowork + Plugins\n(open-source)",
     pos: [0, level2, 0],
     size: [2.2, 0.5, 1.2],

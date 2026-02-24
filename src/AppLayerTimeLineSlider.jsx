@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect, Suspense } from "react";
+import React, { useMemo, useRef, useState, useEffect, useCallback, Suspense } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
@@ -23,6 +23,9 @@ const RING_Y = TIMELINE_Y - 1; // hauteur des cercles ImpactRing et ShockwaveRin
 // Plan StockMarket (YZ) — évolution des cours, timeline synchronisée
 const STOCK_PLANE_X = -10;
 const STOCK_Y_RANGE = 6; // hauteur du graphique en unités 3D
+
+/** Espacement fixe entre les new nodes (modifiable) */
+const SPAWN_NODE_SPACING = 0.4;
 
 function dateToTimelineZ(dateStrOrDate, dilation = 1) {
   const d = dateStrOrDate instanceof Date ? dateStrOrDate : new Date(dateStrOrDate);
@@ -475,6 +478,14 @@ function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
   );
 }
 
+function lightenColor(hex, percent = 10) {
+  const num = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.round(((num >> 16) & 0xff) * (1 + percent / 100)));
+  const g = Math.min(255, Math.round(((num >> 8) & 0xff) * (1 + percent / 100)));
+  const b = Math.min(255, Math.round((num & 0xff) * (1 + percent / 100)));
+  return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
 const LERP_FACTOR = 0.08;
 const FLY_TO_DISTANCE = 6;
 const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_TO_DISTANCE);
@@ -503,7 +514,7 @@ function CameraFollowDilation({ timeDilation, controlsRef }) {
   return null;
 }
 
-function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick }) {
+function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick, onSpawnNodes }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
   const hover = hoveredNodeKey === nodeKey;
@@ -516,8 +527,42 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
     meta: layerTr?.meta ?? layerBase?.meta ?? "",
   };
 
+  const numNew = Math.max(0, parseInt(node.numberNewNode, 10) || 0);
+  const hasButton = numNew > 0;
+  const buttonColor = hasButton ? lightenColor(layerInfo.color, 10) : null;
+  const buttonSize = Math.min(node.size[1] * 0.7, 0.35);
+  const buttonZ = node.size[2] / 2 + 0.08;
+
   return (
     <group position={node.pos}>
+      {hasButton && (
+        <mesh
+          position={[0, 0, buttonZ]}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSpawnNodes?.(nodeKey, node.pos, numNew, node.layer, node.size, node.NewNodes);
+          }}
+          onPointerEnter={(e) => {
+            e.stopPropagation();
+            document.body.style.cursor = "pointer";
+            if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+            leaveTimeout.current = null;
+            isPointerOverTooltip.current = false;
+            setHoveredNodeKey(nodeKey);
+          }}
+          onPointerLeave={(e) => {
+            document.body.style.cursor = "auto";
+            if (!isPointerOverTooltip.current) {
+              leaveTimeout.current = setTimeout(() => {
+                setHoveredNodeKey((prev) => (prev === nodeKey ? null : prev));
+              }, 200);
+            }
+          }}
+        >
+          <boxGeometry args={[buttonSize, buttonSize, 0.05]} />
+          <meshStandardMaterial color={buttonColor} metalness={0.2} roughness={0.65} />
+        </mesh>
+      )}
       <mesh
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -542,11 +587,11 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
       </mesh>
 
       <Text
-        position={[0, node.size[1] / 2 + 0.32, 0]}
+        position={[0, node.size[1] / 2 + (node.spawnValue ? 0.06 : 0.32), 0]}
         fontSize={0.22}
         maxWidth={2.6}
         anchorX="center"
-        anchorY="middle"
+        anchorY={node.spawnValue ? "bottom" : "middle"}
       >
         {node.label}
       </Text>
@@ -560,7 +605,8 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
               color: "white",
               borderRadius: 10,
               fontSize: 12,
-              width: 280,
+              width: node.spawnValue ? 320 : 280,
+              maxWidth: 320,
               overflow: "hidden",
               boxSizing: "border-box",
               border: `1px solid ${layerInfo.color}`,
@@ -577,6 +623,10 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
               setHoveredNodeKey((prev) => (prev === nodeKey ? null : prev));
             }}
           >
+            {node.spawnValue ? (
+              <div style={{ lineHeight: 1.4 }}>{node.spawnValue}</div>
+            ) : (
+              <>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <div
                 style={{
@@ -624,6 +674,8 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
                   <span style={{ opacity: 0.8 }}>{T[lang]?.metric ?? "Metric"}:</span> {node.source.metric}
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </Html>
@@ -947,7 +999,39 @@ function Scene({
   setFlyToTarget,
 }) {
   const [hoveredNodeKey, setHoveredNodeKey] = useState(null);
+  const [spawnedNodes, setSpawnedNodes] = useState([]);
   const controlsRef = useRef(null);
+
+  const handleSpawnNodes = useCallback((parentKey, parentPos, count, layer, parentSize, newNodesData) => {
+    setSpawnedNodes((prev) => {
+      const existing = prev.filter((sn) => sn.parentKey === parentKey);
+      if (existing.length > 0) {
+        return prev.filter((sn) => sn.parentKey !== parentKey);
+      }
+      const [px, py, pz] = parentPos;
+      const entries = newNodesData && typeof newNodesData === "object"
+        ? Object.entries(newNodesData).slice(0, count)
+        : [];
+      const startX = px + parentSize[0] + SPAWN_NODE_SPACING;
+      const slotWidth = parentSize[0] + SPAWN_NODE_SPACING;
+      const newNodes = [];
+      for (let i = 0; i < count; i++) {
+        const [label, value] = entries[i] || [`+${i + 1}`, ""];
+        const x = startX + i * slotWidth;
+        newNodes.push({
+          key: `${parentKey}-spawn-${Date.now()}-${i}`,
+          parentKey,
+          pos: [x, py, pz],
+          layer,
+          size: [...parentSize],
+          label,
+          value: value || "",
+        });
+      }
+      return [...prev, ...newNodes];
+    });
+  }, []);
+
   const nodesWithPositions = useMemo(() => {
     return NODES.map((n) => {
       const pos = [...n.pos];
@@ -980,6 +1064,21 @@ function Scene({
             lang={lang}
             node={n}
             nodeKey={`${n.id}-${i}`}
+            hoveredNodeKey={hoveredNodeKey}
+            setHoveredNodeKey={setHoveredNodeKey}
+            onDoubleClick={(pos) => setFlyToTarget(pos)}
+            onSpawnNodes={handleSpawnNodes}
+          />
+        ))}
+
+      {spawnedNodes
+        .filter((sn) => layerVisibility[sn.layer] !== false)
+        .map((sn) => (
+          <NodeBox
+            key={sn.key}
+            lang={lang}
+            node={{ id: sn.label, layer: sn.layer, pos: sn.pos, size: sn.size, label: sn.label, spawnValue: sn.value }}
+            nodeKey={sn.key}
             hoveredNodeKey={hoveredNodeKey}
             setHoveredNodeKey={setHoveredNodeKey}
             onDoubleClick={(pos) => setFlyToTarget(pos)}
