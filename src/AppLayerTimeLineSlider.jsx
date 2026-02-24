@@ -471,6 +471,26 @@ const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_
 const FIT_TARGET = [0, 1, 0];
 const FIT_CAMERA_OFFSET = new THREE.Vector3(12, 10, 12);
 
+function CameraFollowDilation({ timeDilation, controlsRef }) {
+  const { camera } = useThree();
+  const prevCenterZRef = useRef(0);
+
+  useEffect(() => {
+    if (!controlsRef?.current) return;
+    const { zMin, zMax } = getEffectiveTimelineBounds(timeDilation);
+    const centerZ = (zMin + zMax) / 2;
+    const prevCenterZ = prevCenterZRef.current;
+    const deltaZ = centerZ - prevCenterZ;
+    prevCenterZRef.current = centerZ;
+
+    const controls = controlsRef.current;
+    controls.target.z += deltaZ;
+    camera.position.z += deltaZ;
+  }, [timeDilation, controlsRef, camera]);
+
+  return null;
+}
+
 function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
@@ -953,6 +973,7 @@ function Scene({
         ))}
 
       <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.05} />
+      <CameraFollowDilation timeDilation={timeDilation} controlsRef={controlsRef} />
       {flyToTarget && !fitFrame && (
         <SmoothFlyTo
           target={flyToTarget}
