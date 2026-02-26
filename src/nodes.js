@@ -19,7 +19,7 @@ export const NODES = [
     id: "mcp",
     layer: 0,
     label: "MCP / AAIF\n(standard layer)",
-    pos: [0, level0, 0],
+    pos: [4, level0, 0],
     size: [2.4, 0.35, 1.2],
     source: {
       date: "2025-12-09",
@@ -131,7 +131,7 @@ export const NODES = [
       "Plugin Create": "Create and customize new plugins from scratch.",  
     },   
     label: "Cowork + Plugins\n(open-source)",
-    pos: [0, level2, 0],
+    pos: [1, level2, 0],
     size: [2.2, 0.5, 1.2],
     source: {
       date: "2026-01-12",
@@ -145,7 +145,7 @@ export const NODES = [
     id: "snow",
     layer: 4,
     label: "Snowflake\n$200M",
-    pos: [2.9, level4, -0.6],
+    pos: [-2.9, level4, -0.6],
     size: [1.6, 0.45, 1.0],
     source: {
       date: "2025-12-04",
@@ -157,7 +157,7 @@ export const NODES = [
     id: "msft",
     layer: 4,
     label: "Microsoft internal\n(Claude Code)",
-    pos: [-3.2, level4, 0.9],
+    pos: [4, level4, 0.9],
     size: [1.8, 0.45, 1.1],
     source: {
       date: "2026-01-26",

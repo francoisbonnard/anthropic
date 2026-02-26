@@ -18,7 +18,7 @@ const TIMELINE_Z_MIN = -8;
 const TIMELINE_Z_MAX = 8;
 const TIMELINE_LENGTH = TIMELINE_Z_MAX - TIMELINE_Z_MIN;
 const RING_RADIUS = TIMELINE_LENGTH / 2; // diamètre = longueur timeline
-const RING_Y = TIMELINE_Y - 1; // hauteur des cercles ImpactRing et ShockwaveRing
+const RING_Y = TIMELINE_Y - 1; // hauteur des cercles AnthropicRing et ShockwaveRing
 
 // Plan StockMarket (YZ) — évolution des cours, timeline synchronisée
 const STOCK_PLANE_X = -10;
@@ -118,19 +118,120 @@ const LAYERS = {
   },
 };
 
+function FinanceHUD({ lang, showStockMarket, setShowStockMarket, stockPlanePosition = 0, setStockPlanePosition }) {
+  const [minimized, setMinimized] = useState(false);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 14,
+        left: 14,
+        width: minimized ? 120 : (showStockMarket ? 240 : 180),
+        background: "rgba(0,0,0,0.72)",
+        color: "white",
+        borderRadius: 14,
+        padding: minimized ? "10px 10px 9px" : "12px 12px 10px",
+        border: "1px solid rgba(255,255,255,0.12)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+        pointerEvents: "auto",
+        backdropFilter: "blur(6px)",
+        zIndex: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: minimized ? 0 : 10,
+        }}
+      >
+        <div style={{ fontWeight: 400, fontSize: 13, letterSpacing: 0.2 }}>
+          {T[lang]?.information ?? "Information"}
+        </div>
+        <button
+          onClick={() => setMinimized((v) => !v)}
+          style={{
+            appearance: "none",
+            border: "1px solid rgba(255,255,255,0.18)",
+            background: "rgba(255,255,255,0.06)",
+            color: "white",
+            borderRadius: 10,
+            padding: "6px 9px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            lineHeight: 1,
+          }}
+          title={minimized ? (T[lang]?.expand ?? "Expand") : (T[lang]?.minimize ?? "Minimize")}
+        >
+          {minimized ? "▾" : "▴"}
+        </button>
+      </div>
+
+      {!minimized && (
+        <label
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input
+              type="checkbox"
+              checked={showStockMarket}
+              onChange={(e) => setShowStockMarket(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
+            />
+            {T[lang]?.stockMarket ?? "Stock Market"}
+          </div>
+          {showStockMarket && setStockPlanePosition && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={stockPlanePosition}
+                onChange={(e) => setStockPlanePosition(parseFloat(e.target.value))}
+                style={{ flex: 1, minWidth: 80, height: 6, accentColor: "#3b82f6", cursor: "pointer" }}
+                title="Position du plan Stock Market"
+              />
+            </div>
+          )}
+        </label>
+      )}
+    </div>
+  );
+}
+
 const T = {
   fr: {
     layersLegend: "Légende des layers",
+    legendMinimal: "Titre seulement",
+    legendLayers: "Layers",
+    legendFull: "Tout",
     expand: "Développer",
     minimize: "Réduire",
-    visibility: "Visibilité",
+    visibility: "Outils",
+    information: "Information",
     axesHelper: "Repère X, Y, Z",
+    timelineGuide: "Repère temporel",
+    anthropicRing: "AnthropicRing",
+    shockwaveRing: "ShockwaveRing",
     gridXZ: "Grille XZ",
     stockMarket: "Stock Market",
     timeDilation: "Dilatation temporelle",
     date: "Date",
     link: "Lien",
-    metric: "Métrique",
+    abstract: "Résumé",
     layers: {
       0: { name: "L0 — Protocol & Standards", meta: "Standards d'interopérabilité (protocoles, formats, conventions, schémas) qui réduisent le coût d'intégration et rendent possible l'écosystème models ↔ agents ↔ tools ↔ data." },
       1: { name: "L1 — Foundation Models", meta: "Modèles fondamentaux (LLMs, multimodaux) fournissant les capacités cognitives brutes : compréhension, génération, raisonnement, vision, audio. Aucune action directe : uniquement de l'inférence." },
@@ -143,16 +244,23 @@ const T = {
   },
   en: {
     layersLegend: "Layers legend",
+    legendMinimal: "Title only",
+    legendLayers: "Layers",
+    legendFull: "All",
     expand: "Expand",
     minimize: "Minimize",
-    visibility: "Visibility",
+    visibility: "Tools",
+    information: "Information",
     axesHelper: "X, Y, Z axes",
+    timelineGuide: "Timeline guide",
+    anthropicRing: "AnthropicRing",
+    shockwaveRing: "ShockwaveRing",
     gridXZ: "XZ grid",
     stockMarket: "Stock Market",
     timeDilation: "Time dilation",
     date: "Date",
     link: "Link",
-    metric: "Metric",
+    abstract: "Abstract",
     layers: {
       0: { name: "L0 — Protocol & Standards", meta: "Interoperability standards (protocols, formats, conventions, schemas) that reduce integration costs and enable the models ↔ agents ↔ tools ↔ data ecosystem." },
       1: { name: "L1 — Foundation Models", meta: "Foundation models (LLMs, multimodal) providing raw cognitive capabilities: understanding, generation, reasoning, vision, audio. No direct action: inference only." },
@@ -165,7 +273,7 @@ const T = {
   },
 };
 
-function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showStockMarket, setShowStockMarket, stockPlanePosition = 0, setStockPlanePosition }) {
+function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setShowGrid, showTimelineGuide, setShowTimelineGuide, showAnthropicRing, setShowAnthropicRing }) {
   const [minimized, setMinimized] = useState(false);
 
   return (
@@ -174,7 +282,7 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
         position: "absolute",
         left: 14,
         bottom: 14,
-        width: minimized ? 180 : (showStockMarket ? 280 : 220),
+        width: minimized ? 180 : 220,
         background: "rgba(0,0,0,0.72)",
         color: "white",
         borderRadius: 14,
@@ -195,8 +303,8 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
           marginBottom: minimized ? 6 : 10,
         }}
       >
-        <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2 }}>
-          {T[lang]?.visibility ?? "Visibilité"}
+        <div style={{ fontWeight: 400, fontSize: 13, letterSpacing: 0.2 }}>
+          {T[lang]?.visibility ?? "Outils"}
         </div>
         <button
           onClick={() => setMinimized((v) => !v)}
@@ -232,11 +340,15 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
           >
             <input
               type="checkbox"
-              checked={showAxesHelper}
-              onChange={(e) => setShowAxesHelper(e.target.checked)}
+              checked={showAxesHelper && showGrid}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setShowAxesHelper(v);
+                setShowGrid(v);
+              }}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            {T[lang]?.axesHelper ?? "Repère X, Y, Z"}
+            {T[lang]?.axesHelper ?? "Repère X, Y, Z"} / {T[lang]?.gridXZ ?? "Grille XZ"}
           </label>
           <label
             style={{
@@ -250,11 +362,11 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
           >
             <input
               type="checkbox"
-              checked={showGrid}
-              onChange={(e) => setShowGrid(e.target.checked)}
+              checked={showAnthropicRing}
+              onChange={(e) => setShowAnthropicRing(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            {T[lang]?.gridXZ ?? "Grille XZ"}
+            {T[lang]?.anthropicRing ?? "AnthropicRing"}
           </label>
           <label
             style={{
@@ -268,24 +380,15 @@ function VisibilityHUD({ lang, showAxesHelper, setShowAxesHelper, showGrid, setS
           >
             <input
               type="checkbox"
-              checked={showStockMarket}
-              onChange={(e) => setShowStockMarket(e.target.checked)}
+              checked={showTimelineGuide}
+              onChange={(e) => setShowTimelineGuide(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: "#3b82f6" }}
             />
-            {T[lang]?.stockMarket ?? "Stock Market"}
-            {showStockMarket && setStockPlanePosition && (
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={stockPlanePosition}
-                onChange={(e) => setStockPlanePosition(parseFloat(e.target.value))}
-                style={{ flex: 1, minWidth: 60, height: 6, accentColor: "#3b82f6", cursor: "pointer" }}
-                title="Position du plan Stock Market"
-              />
-            )}
+            {T[lang]?.timelineGuide ?? "Repère temporel"}
           </label>
+          <div style={{ marginTop: 6, fontSize: 11, opacity: 0.75 }}>
+            Copyright : francois.bonnard@arrow.com
+          </div>
         </div>
       )}
     </div>
@@ -318,9 +421,6 @@ function TimeDilationSlider({ lang, timeDilation, setTimeDilation }) {
         backdropFilter: "blur(6px)",
       }}
     >
-      <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: 0.2, marginBottom: 10 }}>
-        {T[lang]?.timeDilation ?? "Dilatation temporelle"} ×{timeDilation.toFixed(1)}
-      </div>
       <input
         type="range"
         min={TIME_DILATION_MIN}
@@ -335,22 +435,39 @@ function TimeDilationSlider({ lang, timeDilation, setTimeDilation }) {
           cursor: "pointer",
         }}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.8, marginTop: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.8, marginTop: 6 }}>
         <span>×1</span>
+        <span style={{ fontWeight: 400, fontSize: 12, letterSpacing: 0.2 }}>
+          {T[lang]?.timeDilation ?? "Dilatation temporelle"}
+        </span>
         <span>×10</span>
       </div>
     </div>
   );
 }
 
-function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
-  const [minimized, setMinimized] = useState(true);
+const LEGEND_VIEW = { closed: 0, layers: 1, full: 2 };
 
-  // Inverse order: L6 top ... L0 bottom
+function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
+  const [view, setView] = useState(LEGEND_VIEW.closed);
+
   const layerKeys = useMemo(
     () => Object.keys(LAYERS).map(Number).sort((a, b) => b - a),
     []
   );
+
+  const showLayers = view >= LEGEND_VIEW.layers;
+  const showFull = view === LEGEND_VIEW.full;
+
+  const cycleView = () => {
+    setView((v) => (v === LEGEND_VIEW.closed ? LEGEND_VIEW.layers : v === LEGEND_VIEW.layers ? LEGEND_VIEW.full : LEGEND_VIEW.closed));
+  };
+
+  const cycleTitle = view === LEGEND_VIEW.closed
+    ? (T[lang]?.legendMinimal ?? "Titre seulement")
+    : view === LEGEND_VIEW.layers
+      ? (T[lang]?.legendLayers ?? "Layers")
+      : (T[lang]?.legendFull ?? "Tout");
 
   return (
     <div
@@ -358,12 +475,15 @@ function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
         position: "absolute",
         right: 14,
         bottom: 14,
-        width: minimized ? 240 : 480,
-        maxWidth: `min(${minimized ? 240 : 480}px, calc(100vw - 28px))`,
+        width: view === LEGEND_VIEW.closed ? 180 : view === LEGEND_VIEW.layers ? 320 : 480,
+        maxWidth: `min(${view === LEGEND_VIEW.closed ? 180 : view === LEGEND_VIEW.layers ? 320 : 480}px, calc(100vw - 28px))`,
+        maxHeight: "calc(100vh - 80px)",
+        display: "flex",
+        flexDirection: "column",
         background: "rgba(0,0,0,0.72)",
         color: "white",
         borderRadius: 14,
-        padding: minimized ? "10px 10px 9px" : "12px 12px 10px",
+        padding: view === LEGEND_VIEW.closed ? "10px 10px 9px" : "12px 12px 10px",
         border: "1px solid rgba(255,255,255,0.12)",
         boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
@@ -377,21 +497,15 @@ function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 10,
-          marginBottom: minimized ? 6 : 10,
+          marginBottom: showLayers ? 10 : 0,
+          flexShrink: 0,
         }}
       >
-        <div
-          style={{
-            fontWeight: 900,
-            fontSize: minimized ? 13 : 19.5,
-            letterSpacing: 0.2,
-          }}
-        >
+        <div style={{ fontWeight: 400, fontSize: 13, letterSpacing: 0.2 }}>
           {T[lang]?.layersLegend ?? "Layers legend"}
         </div>
-
         <button
-          onClick={() => setMinimized((v) => !v)}
+          onClick={cycleView}
           style={{
             appearance: "none",
             border: "1px solid rgba(255,255,255,0.18)",
@@ -404,73 +518,55 @@ function LegendHUD({ lang, layerVisibility, setLayerVisibility }) {
             cursor: "pointer",
             lineHeight: 1,
           }}
-          title={minimized ? (T[lang]?.expand ?? "Expand") : (T[lang]?.minimize ?? "Minimize")}
+          title={cycleTitle}
         >
-          {minimized ? "▾" : "▴"}
+          {view === LEGEND_VIEW.closed ? "▾" : view === LEGEND_VIEW.layers ? "▾▾" : "▴"}
         </button>
       </div>
 
-      {/* Minimized = compact list. Expanded = label + meta + visibility toggle */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: minimized ? 7 : 10,
-          listStyle: "none",
-          paddingLeft: 0,
-        }}
-      >
-        {layerKeys.map((k) => {
-          const l = LAYERS[k];
-          const tl = T[lang]?.layers?.[k];
-          const visible = layerVisibility?.[k] ?? true;
-          return (
-            <div key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  cursor: "pointer",
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={visible}
-                  onChange={(e) =>
-                    setLayerVisibility?.((prev) => ({ ...prev, [k]: e.target.checked }))
-                  }
-                  style={{
-                    width: minimized ? 16 : 24,
-                    height: minimized ? 16 : 24,
-                    accentColor: l.color,
-                    flex: "0 0 auto",
-                  }}
-                />
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: minimized ? 12 : 18,
-                      marginBottom: minimized ? 0 : 3,
-                    }}
-                  >
-                    {tl?.name ?? l?.name ?? `L${k}`}
+      {showLayers && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: showFull ? 10 : 7,
+            listStyle: "none",
+            paddingLeft: 0,
+            overflowY: "auto",
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          {layerKeys.map((k) => {
+            const l = LAYERS[k];
+            const tl = T[lang]?.layers?.[k];
+            const visible = layerVisibility?.[k] ?? true;
+            return (
+              <div key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flex: 1, minWidth: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={visible}
+                    onChange={(e) => setLayerVisibility?.((prev) => ({ ...prev, [k]: e.target.checked }))}
+                    style={{ width: showFull ? 24 : 16, height: showFull ? 24 : 16, accentColor: l.color, flex: "0 0 auto" }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 400, fontSize: showFull ? 18 : 12, marginBottom: showFull ? 3 : 0 }}>
+                      {tl?.name ?? l?.name ?? `L${k}`}
+                    </div>
+                    {showFull && (
+                      <div style={{ fontSize: 16.5, opacity: 0.9, lineHeight: 1.25 }}>{tl?.meta ?? l?.meta ?? ""}</div>
+                    )}
                   </div>
-                  {!minimized && (
-                    <div style={{ fontSize: 16.5, opacity: 0.9, lineHeight: 1.25 }}>{tl?.meta ?? l?.meta ?? ""}</div>
-                  )}
-                </div>
-              </label>
-            </div>
-          );
-        })}
-      </div>
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {!minimized && (
-        <div style={{ marginTop: 10, fontSize: 15.75, opacity: 0.75, lineHeight: 1.25 }}>
+      {showFull && (
+        <div style={{ marginTop: 10, fontSize: 15.75, opacity: 0.75, lineHeight: 1.25, flexShrink: 0 }}>
           Copyright : francois.bonnard@arrow.com
         </div>
       )}
@@ -529,17 +625,20 @@ const FLY_TO_OFFSET = new THREE.Vector3(4, 3, 4).normalize().multiplyScalar(FLY_
 const FIT_TARGET = [0, 1, 0];
 const FIT_CAMERA_OFFSET = new THREE.Vector3(12, 10, 12);
 
+// Année cible sur laquelle la caméra reste focalisée lors du dolly (slider dilatation)
+const FOCAL_YEAR = 2025;
+const FOCAL_DATE = new Date(FOCAL_YEAR, 9, 4); // 4 oct
+
 function CameraFollowDilation({ timeDilation, controlsRef }) {
   const { camera } = useThree();
-  const prevCenterZRef = useRef(0);
+  const prevCenterZRef = useRef(null);
 
   useEffect(() => {
     if (!controlsRef?.current) return;
-    const { zMin, zMax } = getEffectiveTimelineBounds(timeDilation);
-    const centerZ = (zMin + zMax) / 2;
-    const prevCenterZ = prevCenterZRef.current;
-    const deltaZ = centerZ - prevCenterZ;
-    prevCenterZRef.current = centerZ;
+    const focusZ = dateToTimelineZ(FOCAL_DATE, timeDilation);
+    const prevCenterZ = prevCenterZRef.current ?? focusZ;
+    const deltaZ = focusZ - prevCenterZ;
+    prevCenterZRef.current = focusZ;
 
     const controls = controlsRef.current;
     controls.target.z += deltaZ;
@@ -549,7 +648,7 @@ function CameraFollowDilation({ timeDilation, controlsRef }) {
   return null;
 }
 
-function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDoubleClick, onSpawnNodes }) {
+function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, showTimelineGuide, onDoubleClick, onSpawnNodes }) {
   const leaveTimeout = useRef(null);
   const isPointerOverTooltip = useRef(false);
   const [isButtonHovered, setIsButtonHovered] = useState(false);
@@ -643,6 +742,17 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
         {node.label}
       </Text>
 
+      {showTimelineGuide && (
+        <Line
+          points={[
+            [0, 0, 0],
+            [0, TIMELINE_Y - node.pos[1], 0],
+            [-node.pos[0], TIMELINE_Y - node.pos[1], 0],
+          ]}
+          color={layerInfo.color}
+          lineWidth={1.5}
+        />
+      )}
       {hover && (
         <Html distanceFactor={10} position={[0, node.size[1] / 2 + 0.7, 0]}>
           <div
@@ -688,8 +798,7 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
             </div>
 
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>{layerInfo.name}</div>
-              <div style={{ opacity: 0.92, lineHeight: 1.25 }}>{layerInfo.meta}</div>
+              <div style={{ fontWeight: 400 }}>{layerInfo.name}</div>
             </div>
 
             {node.source && (
@@ -698,28 +807,30 @@ function NodeBox({ lang, node, nodeKey, hoveredNodeKey, setHoveredNodeKey, onDou
                   <span style={{ opacity: 0.8 }}>{T[lang]?.date ?? "Date"}:</span> {node.source.date}
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <span style={{ opacity: 0.8 }}>{T[lang]?.link ?? "Link"}:</span>{" "}
-                  <a
-                    href={node.source.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: "#7dd3fc",
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {node.source.link}
-                  </a>
+                  <span style={{ opacity: 0.8 }}>{T[lang]?.abstract ?? "Abstract"}:</span> {node.source.metric}
                 </div>
-                <div>
-                  <span style={{ opacity: 0.8 }}>{T[lang]?.metric ?? "Metric"}:</span> {node.source.metric}
-                </div>
+                {node.source.link && (
+                  <div>
+                    <span style={{ opacity: 0.8 }}>{T[lang]?.link ?? "Link"}:</span>{" "}
+                    <a
+                      href={node.source.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "#7dd3fc",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {node.source.link}
+                    </a>
+                  </div>
+                )}
               </div>
             )}
               </>
@@ -781,7 +892,7 @@ function CurvedText({ text, radius, y, fontSize = 0.28, startAngle = 0, charWidt
 
 const IMPACT_RING_ROTATION_SPEED = 0.15;
 
-function ImpactRing({ radius = 6, y = RING_Y }) {
+function AnthropicRing({ radius = 6, y = RING_Y }) {
   const ref = useRef();
   useFrame((_, dt) => {
     if (ref.current) ref.current.rotation.y -= IMPACT_RING_ROTATION_SPEED * dt;
@@ -808,14 +919,30 @@ function ImpactRing({ radius = 6, y = RING_Y }) {
   );
 }
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
 function Timeline({ timeDilation = 1 }) {
   const { zMin, zMax } = getEffectiveTimelineBounds(timeDilation);
   const ticks = useMemo(() => {
     const out = [];
-    for (let y = 2022; y <= 2026; y++) {
-      const d = new Date(y, 9, 4);
+    const start = new Date(TIMELINE_START);
+    const end = new Date(TIMELINE_END);
+    const d = new Date(start);
+    while (d <= end) {
       const z = dateToTimelineZ(d, timeDilation);
-      out.push({ year: y, z });
+      const month = d.getMonth();
+      const year = d.getFullYear();
+      const isYearTick = month === 0 || (year === 2022 && month === 9);
+      out.push({
+        key: `${year}-${month}`,
+        z,
+        label: isYearTick ? String(year) : MONTH_NAMES[month],
+        isYear: isYearTick,
+      });
+      d.setMonth(d.getMonth() + 1);
     }
     return out;
   }, [timeDilation]);
@@ -827,20 +954,23 @@ function Timeline({ timeDilation = 1 }) {
         color="#64748b"
         lineWidth={1.5}
       />
-      {ticks.map(({ year, z }) => (
-        <group key={year}>
-          <Line points={[[0, 0, z], [0, 0.15, z]]} color="#94a3b8" lineWidth={1} />
-          <Text position={[0, -0.35, z]} fontSize={0.18} anchorX="center" anchorY="middle">
-            {year}
+      {ticks.map(({ key, z, label, isYear }) => (
+        <group key={key}>
+          <Line
+            points={[[0, 0, z], [0, isYear ? 0.15 : 0.08, z]]}
+            color="#94a3b8"
+            lineWidth={isYear ? 1 : 0.5}
+          />
+          <Text
+            position={[0, isYear ? 0.22 : -0.28, z]}
+            fontSize={isYear ? 0.18 : 0.11}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {label}
           </Text>
         </group>
       ))}
-      <Text position={[0, 0.25, zMax + 0.5]} fontSize={0.16} anchorX="center" anchorY="middle">
-        Oct 2022
-      </Text>
-      <Text position={[0, 0.25, zMin - 0.5]} fontSize={0.16} anchorX="center" anchorY="middle">
-        Oct 2026
-      </Text>
     </group>
   );
 }
@@ -1019,13 +1149,18 @@ function SmoothFitFrame({ onComplete, controlsRef }) {
   useFrame(() => {
     if (!controlsRef?.current) return;
     const controls = controlsRef.current;
+    controls.enabled = false;
     const targetPos = new THREE.Vector3(...FIT_TARGET);
     const cameraPos = targetPos.clone().add(FIT_CAMERA_OFFSET);
+    const distTarget = controls.target.distanceTo(targetPos);
+    const distCam = camera.position.distanceTo(cameraPos);
     controls.target.lerp(targetPos, LERP_FACTOR);
     camera.position.lerp(cameraPos, LERP_FACTOR);
-    if (controls.target.distanceTo(targetPos) < 0.01 && camera.position.distanceTo(cameraPos) < 0.01) {
+    if (distTarget < 0.01 && distCam < 0.01) {
       controls.target.copy(targetPos);
       camera.position.copy(cameraPos);
+      if (controls._sphericalDelta) controls._sphericalDelta.set(0, 0, 0);
+      if (controls._panOffset) controls._panOffset.set(0, 0, 0);
       onComplete?.();
     }
   });
@@ -1038,10 +1173,15 @@ function Scene({
   showGrid = false,
   showStockMarket = false,
   stockPlanePosition = 0,
+  showTimelineGuide = false,
+  showAnthropicRing = false,
+  showShockwaveRing = false,
   layerVisibility = DEFAULT_LAYER_VISIBILITY,
   timeDilation = 1,
   fitFrame = false,
   setFitFrame,
+  onFitComplete,
+  orbitControlsKey = 0,
   flyToTarget,
   setFlyToTarget,
 }) {
@@ -1101,8 +1241,8 @@ function Scene({
       {showGrid && <GridXZ />}
       {showStockMarket && <StockMarketPlane timeDilation={timeDilation} stockPlanePosition={stockPlanePosition} />}
       <Timeline timeDilation={timeDilation} />
-      <ImpactRing radius={RING_RADIUS} y={RING_Y} />
-      <ShockwaveRing radius={RING_RADIUS} y={RING_Y} />
+      {showAnthropicRing && <AnthropicRing radius={RING_RADIUS} y={RING_Y} />}
+      {showShockwaveRing && <ShockwaveRing radius={RING_RADIUS} y={RING_Y} />}
 
       {nodesWithPositions
         .map((n, i) => ({ n, i }))
@@ -1115,6 +1255,7 @@ function Scene({
             nodeKey={`${n.id}-${i}`}
             hoveredNodeKey={hoveredNodeKey}
             setHoveredNodeKey={setHoveredNodeKey}
+            showTimelineGuide={showTimelineGuide}
             onDoubleClick={(pos) => setFlyToTarget(pos)}
             onSpawnNodes={handleSpawnNodes}
           />
@@ -1133,12 +1274,13 @@ function Scene({
               nodeKey={sn.key}
               hoveredNodeKey={hoveredNodeKey}
               setHoveredNodeKey={setHoveredNodeKey}
+              showTimelineGuide={showTimelineGuide}
               onDoubleClick={(pos) => setFlyToTarget(pos)}
             />
           );
         })}
 
-      <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.05} />
+      <OrbitControls key={orbitControlsKey} ref={controlsRef} makeDefault enableDamping dampingFactor={0.05} />
       <CameraFollowDilation timeDilation={timeDilation} controlsRef={controlsRef} />
       {flyToTarget && !fitFrame && (
         <SmoothFlyTo
@@ -1150,7 +1292,7 @@ function Scene({
       {fitFrame && (
         <SmoothFitFrame
           controlsRef={controlsRef}
-          onComplete={() => setFitFrame?.(false)}
+          onComplete={onFitComplete ?? (() => setFitFrame?.(false))}
         />
       )}
     </>
@@ -1158,14 +1300,17 @@ function Scene({
 }
 
 export default function App() {
-  const [lang, setLang] = useState("fr");
+  const [lang, setLang] = useState("en");
   const [showAxesHelper, setShowAxesHelper] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
+  const [showTimelineGuide, setShowTimelineGuide] = useState(true);
+  const [showAnthropicRing, setShowAnthropicRing] = useState(false);
   const [showStockMarket, setShowStockMarket] = useState(true);
   const [stockPlanePosition, setStockPlanePosition] = useState(0);
   const [layerVisibility, setLayerVisibility] = useState(DEFAULT_LAYER_VISIBILITY);
   const [timeDilation, setTimeDilation] = useState(1);
   const [fitFrame, setFitFrame] = useState(false);
+  const [orbitControlsKey, setOrbitControlsKey] = useState(0);
   const [flyToTarget, setFlyToTarget] = useState(null);
   const lastPointerMissRef = useRef(0);
 
@@ -1241,26 +1386,40 @@ export default function App() {
           showGrid={showGrid}
           showStockMarket={showStockMarket}
           stockPlanePosition={stockPlanePosition}
+          showTimelineGuide={showTimelineGuide}
+          showAnthropicRing={showAnthropicRing}
           layerVisibility={layerVisibility}
           timeDilation={timeDilation}
           fitFrame={fitFrame}
           setFitFrame={setFitFrame}
+          onFitComplete={() => {
+            setFitFrame(false);
+            setOrbitControlsKey((k) => k + 1);
+          }}
+          orbitControlsKey={orbitControlsKey}
           flyToTarget={flyToTarget}
           setFlyToTarget={setFlyToTarget}
         />
         </Suspense>
       </Canvas>
 
+      <FinanceHUD
+        lang={lang}
+        showStockMarket={showStockMarket}
+        setShowStockMarket={setShowStockMarket}
+        stockPlanePosition={stockPlanePosition}
+        setStockPlanePosition={setStockPlanePosition}
+      />
       <VisibilityHUD
         lang={lang}
         showAxesHelper={showAxesHelper}
         setShowAxesHelper={setShowAxesHelper}
         showGrid={showGrid}
         setShowGrid={setShowGrid}
-        showStockMarket={showStockMarket}
-        setShowStockMarket={setShowStockMarket}
-        stockPlanePosition={stockPlanePosition}
-        setStockPlanePosition={setStockPlanePosition}
+        showTimelineGuide={showTimelineGuide}
+        setShowTimelineGuide={setShowTimelineGuide}
+        showAnthropicRing={showAnthropicRing}
+        setShowAnthropicRing={setShowAnthropicRing}
       />
       <TimeDilationSlider lang={lang} timeDilation={timeDilation} setTimeDilation={setTimeDilation} />
       <LegendHUD lang={lang} layerVisibility={layerVisibility} setLayerVisibility={setLayerVisibility} />

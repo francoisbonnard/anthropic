@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Line, Html } from "@react-three/drei";
@@ -54,12 +54,6 @@ export function getTextArcPortion(text, radius, fontSize, startAngle = 0, charWi
   const charAngles = [...text].map((_, i) =>
     reverse ? endAngle - (i + 0.5) * charWidth / radius : startAngle + (i + 0.5) * charWidth / radius
   );
-  // #region agent log
-  if (text.length > 0) {
-    const sample = { first: { char: text[0], angle: charAngles[0], i: 0 }, last: { char: text[text.length - 1], angle: charAngles[charAngles.length - 1], i: text.length - 1 }, startAngle, endAngle };
-    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'getTextArcPortion',message:'char order sample',data:sample,timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  }
-  // #endregion
   return {
     startAngle,
     endAngle,
@@ -576,12 +570,6 @@ function CurvedText({ text, radius, y, fontSize = 0.28, startAngle = 0, charWidt
     [text, radius, fontSize, startAngle, charWidthRatio, reverse]
   );
 
-  // #region agent log
-  useEffect(() => {
-    const d = { firstChar: text[0], lastChar: text[text.length - 1], firstAngle: charAngles[0], lastAngle: charAngles[charAngles.length - 1], firstX: Math.cos(charAngles[0]) * radius, firstZ: Math.sin(charAngles[0]) * radius };
-    fetch('http://127.0.0.1:7798/ingest/baf3c516-1de8-4c1d-93ec-431afbaf7d3a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'721ae6'},body:JSON.stringify({sessionId:'721ae6',location:'CurvedText',message:'first/last pos',data:d,timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-  }, [text, charAngles, radius]);
-  // #endregion
   return (
     <group>
       {[...text].map((char, i) => (
